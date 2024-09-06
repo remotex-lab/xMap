@@ -684,5 +684,22 @@ describe('SourceService', () => {
 
             expect(mapObject).toEqual(mapOriginalObject);
         });
+
+        test('should return a SourceMapInterface object with file and sourceRoot', () => {
+            const mapOriginalObject = {
+                version: 3,
+                file: 'bundle.js',
+                sources: [ 'src/testx.ts' ],
+                sourcesContent: [ '\n' ],
+                mappings: ';;;AAEA,SAAS,KAAK;',
+                names: [],
+                sourceRoot: 'test'
+            };
+
+            const service = new SourceService(mapOriginalObject);
+            const mapObject = service.getMapObject();
+
+            expect(mapObject).toEqual(mapOriginalObject);
+        });
     });
 });
