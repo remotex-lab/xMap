@@ -25,6 +25,12 @@ import { decodeVLQ, encodeArrayVLQ } from '@components/base64.component';
 
 export class SourceService {
     /**
+     * The name of the generated file (bundle) that this source map applies to.
+     */
+
+    private readonly file: string | null;
+
+    /**
      * A list of symbol names used by the “mappings” entry.
      */
 
@@ -67,6 +73,7 @@ export class SourceService {
     constructor(source: SourceMapInterface) {
         this.validateSourceMap(source);
 
+        this.file = source.file ?? null;
         this.names = source.names ?? [];
         this.sources = source.sources ?? [];
         this.mappings = [];
@@ -91,13 +98,18 @@ export class SourceService {
      */
 
     getMapObject(): SourceMapInterface {
-        return {
+        const sourceMap: SourceMapInterface = {
             version: 3,
             names: this.names,
             sources: this.sources,
             mappings: this.encodeMappings(this.mappings),
             sourcesContent: this.sourcesContent
         };
+
+        if(this.file)
+            sourceMap.file = this.file;
+
+        return sourceMap;
     }
 
     /**
