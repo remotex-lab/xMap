@@ -14,7 +14,7 @@ export interface SourceMapInterface {
      * The bundle filename
      */
 
-    file?: string;
+    file?: string | null;
 
     /**
      * A string of base64 VLQ-encoded mappings.
@@ -39,6 +39,8 @@ export interface SourceMapInterface {
      */
 
     sourcesContent: Array<string>;
+
+    sourceRoot?: string | null;
 }
 
 /**
