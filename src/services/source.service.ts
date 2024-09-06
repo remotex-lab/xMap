@@ -28,7 +28,13 @@ export class SourceService {
      * The name of the generated file (bundle) that this source map applies to.
      */
 
-    private readonly file: string | null;
+    readonly file: string | null;
+
+    /**
+     * The root URL for the sources, if present in the source map.
+     */
+
+    readonly sourceRoot: string | null;
 
     /**
      * A list of symbol names used by the “mappings” entry.
@@ -53,12 +59,6 @@ export class SourceService {
      */
 
     private readonly sourcesContent: Array<string>;
-
-    /**
-     * The root URL for the sources, if present in the source map.
-     */
-
-    private readonly sourceRoot: string | null;
 
     /**
      * Creates a new instance of the SourceService class.
