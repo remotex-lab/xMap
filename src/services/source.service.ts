@@ -159,11 +159,12 @@ export class SourceService {
         return {
             code: relevantCode,
             line: map.sourceLine,
+            name:this.names[map.nameIndex ?? -1] ?? null,
             column: map.sourceColumn,
             endLine: endLine,
             startLine: startLine,
-            name:this.names[map.nameIndex ?? -1] ?? null,
-            source: this.sources[map.fileIndex]
+            source: this.sources[map.fileIndex],
+            sourceRoot: this.sourceRoot
         };
     }
 
@@ -190,9 +191,10 @@ export class SourceService {
 
         return {
             line: map.sourceLine,
-            column: map.sourceColumn,
             name: this.names[map.nameIndex ?? -1] ?? null,
-            source: this.sources[map.fileIndex]
+            column: map.sourceColumn,
+            source: this.sources[map.fileIndex],
+            sourceRoot: this.sourceRoot
         };
     }
 

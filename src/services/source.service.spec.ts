@@ -194,7 +194,8 @@ describe('SourceService', () => {
                 endLine: 7,
                 startLine: 0,
                 name: null,
-                source: 'src/x.spec.ts'
+                source: 'src/x.spec.ts',
+                sourceRoot: null
             });
         });
 
@@ -236,7 +237,8 @@ describe('SourceService', () => {
                 endLine: 6,
                 startLine: 0,
                 name: null,
-                source: 'test.ts'
+                source: 'test.ts',
+                sourceRoot: null
             });
         });
 
@@ -270,7 +272,8 @@ describe('SourceService', () => {
                 endLine: 6,
                 startLine: 0,
                 name: null,
-                source: 'test.ts'
+                source: 'test.ts',
+                sourceRoot: null
             });
         });
 
@@ -287,7 +290,8 @@ describe('SourceService', () => {
                 endLine: 6,
                 startLine: 0,
                 name: null,
-                source: 'test.ts'
+                source: 'test.ts',
+                sourceRoot: null
             });
         });
     });
@@ -328,7 +332,8 @@ describe('SourceService', () => {
                 line: 1,
                 column: 2,
                 name: 'name1',
-                source: 'source1.js'
+                source: 'source1.js',
+                sourceRoot: null
             });
         });
 
@@ -356,7 +361,8 @@ describe('SourceService', () => {
                 line: 1,
                 column: 2,
                 name: 'name1',
-                source: 'source1.js'
+                source: 'source1.js',
+                sourceRoot: null
             });
         });
 
@@ -395,7 +401,8 @@ describe('SourceService', () => {
                 line: 5,
                 column: 10,
                 name: 'functionName',
-                source: 'source.js'
+                source: 'source.js',
+                sourceRoot: null
             });
 
             expect(mockFindMapping).toHaveBeenCalledWith(1, 1, Bias.LOWER_BOUND);

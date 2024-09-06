@@ -245,6 +245,12 @@ export interface PositionInterface {
      */
 
     source: string;
+
+    /**
+     * The root URL for the sources, if present in the source map.
+     */
+
+    sourceRoot: string | null;
 }
 
 /**
