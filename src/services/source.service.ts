@@ -77,6 +77,7 @@ export class SourceService {
         this.names = source.names ?? [];
         this.sources = source.sources ?? [];
         this.mappings = [];
+        this.sourceRoot = source.sourceRoot ?? null;
         this.sourcesContent = source.sourcesContent ?? [];
         this.decodeMappings(source.mappings);
     }
@@ -108,6 +109,9 @@ export class SourceService {
 
         if(this.file)
             sourceMap.file = this.file;
+
+        if (this.sourceRoot)
+            sourceMap.sourceRoot = this.sourceRoot;
 
         return sourceMap;
     }
