@@ -112,16 +112,8 @@ describe('SourceService', () => {
          */
 
         test('should decode and process mappings correctly', () => {
-            const sourceMap: SourceMapInterface = {
-                version: 3,
-                names: [],
-                sources: [],
-                sourcesContent: [],
-                mappings: ';;;AAAA,CAAC;;AACA'
-            };
-
             (service as any).mappings = [];
-            (service as any).decodeMappings(sourceMap);
+            (service as any).decodeMappings(';;;AAAA,CAAC;;AACA');
 
             expect(decodedSegmentMock).toHaveBeenCalledTimes(3);
             expect(decodedSegmentMock).toHaveBeenCalledWith(expect.any(Object), [ 0, 0, 0, 0 ], 4);
@@ -160,17 +152,9 @@ describe('SourceService', () => {
          */
 
         test('should throw an error if decoding fails', () => {
-            const sourceMap: SourceMapInterface = {
-                version: 3,
-                names: [],
-                sources: [],
-                sourcesContent: [],
-                mappings: 'AAAA,CAAC;AACA\n\r\d;;AACA'
-            };
-
             expect(() => {
                 (service as any).mappings = [];
-                (service as any).decodeMappings(sourceMap);
+                (service as any).decodeMappings('AAAA,CAAC;AACA\n\r\d;;AACA');
             }).toThrow(/Error decoding mappings: Invalid Base64 character:/);
         });
     });
@@ -540,7 +524,7 @@ describe('SourceService', () => {
             expect(sourceService['sourcesContent']).toEqual([ 'console.log("source1");', 'console.log("source2");' ]);
 
             // Check if decodeMappings was called with the correct arguments
-            expect(mockDecodeMappings).toHaveBeenCalledWith(sourceMap2, {
+            expect(mockDecodeMappings).toHaveBeenCalledWith('AAAA,AAAA', {
                 nameIndex: 1,
                 fileIndex: 1,
                 generatedLine: 2
