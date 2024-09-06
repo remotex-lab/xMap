@@ -49,7 +49,10 @@ export class SourceService {
     private readonly sourcesContent: Array<string>;
 
     /**
-     * Creates a new SourceService instance.
+     * The root URL for the sources, if present in the source map.
+     */
+
+    private readonly sourceRoot: string | null;
 
     /**
      * Creates a new instance of the SourceService class.
@@ -68,7 +71,7 @@ export class SourceService {
         this.sources = source.sources ?? [];
         this.mappings = [];
         this.sourcesContent = source.sourcesContent ?? [];
-        this.decodeMappings(source);
+        this.decodeMappings(source.mappings);
     }
 
     /**
@@ -207,7 +210,7 @@ export class SourceService {
             const lastSegment = this.mappings[this.mappings.length - 1];
             const lines = this.sourcesContent[lastSegment.fileIndex].split('\n').length;
 
-            this.decodeMappings(maps[0], {
+            this.decodeMappings(maps[0].mappings, {
                 nameIndex: this.names.length - 1,
                 fileIndex: this.sources.length - 1,
                 generatedLine: lines < 2 ? 2 : lines
@@ -269,13 +272,43 @@ export class SourceService {
     }
 
     /**
-     * Decodes and processes the encoded mappings.
+     * Decodes and processes the base64 VLQ-encoded mappings from a source map.
      *
-     *  @param encodedMappings - The source map object to be decoded.
-     * @param thresholdSegment
+     * This method interprets the encoded mappings from the `mappings` property of a source map. It adjusts
+     * the shift state for both generated and original positions in the source code, and processes each
+     * decoded mapping segment using the `decodedSegment` method.
+     *
+     * The decoding process involves:
+     * 1. Parsing the base64 VLQ-encoded mappings.
+     * 2. Adjusting the shift state based on the provided `thresholdSegment` or default values.
+     * 3. Handling each decoded mapping segment with the `decodedSegment` method.
+     *
+     * @param encodedMappings - A string representing the encoded mappings in base64 VLQ format. This string
+     *                          is typically found in the `mappings` property of a source map.
+     * @param thresholdSegment - Optional. An object containing offset information that adjusts the starting
+     *                           point for decoding. This can include offsets for line, column, or file index.
+     *                           If not provided, default values are used.
+     * @throws Error - Throws an error if the decoding process encounters an issue, such as an invalid
+     *                 encoding or unexpected format.
+     *
+     * @example
+     * const encodedMappings = 'AAAA,CAAC,CAAC,CAAC,CAAC;AAAA,CAAC,CAAC,CAAC,CAAC';
+     * const threshold = {
+     *     fileIndex: 0,
+     *     nameIndex: 0,
+     *     sourceLine: 1,
+     *     sourceColumn: 1,
+     *     generatedLine: 1,
+     *     generatedColumn: 1
+     * };
+     * try {
+     *     decodeMappings(encodedMappings, threshold);
+     * } catch (error) {
+     *     console.error('Failed to decode mappings:', error.message);
+     * }
      */
 
-    private decodeMappings(encodedMappings: SourceMapInterface, thresholdSegment?: ThresholdSegmentInterface): void {
+    private decodeMappings(encodedMappings: string, thresholdSegment?: ThresholdSegmentInterface): void {
         // Note: Line and column numbers in source maps start at 1,
         // unlike arrays which start at 0. Therefore, the initial shift for lines is set to 1.
         const shift = Object.assign({
@@ -288,7 +321,7 @@ export class SourceService {
         }, thresholdSegment);
 
         try {
-            for (const [ generatedLine, stringSegments ] of encodedMappings.mappings.split(';').entries()) {
+            for (const [ generatedLine, stringSegments ] of encodedMappings.split(';').entries()) {
                 if (!stringSegments) continue;
                 shift.generatedColumn = 1;
                 const segments = stringSegments.split(',');
