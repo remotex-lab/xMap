@@ -9,22 +9,16 @@ import type { xBuildConfig } from '@remotex-labs/xbuild';
  */
 
 import { version } from 'process';
-import pkg from './package.json' with  { type: 'json' };
-
-const externals = [
-    ...Object.keys(pkg.dependencies ?? {}),
-    ...Object.keys(pkg.devDependencies ?? {})
-];
 
 const config: xBuildConfig = {
     declaration: true,
     esbuild: {
         bundle: true,
         minify: true,
-        format: 'esm',
+        format: 'cjs',
         target: [ `node${ version.slice(1) }` ],
         platform: 'node',
-        external: externals,
+        packages: 'external',
         sourcemap: true,
         entryPoints: [ 'src/index.ts' ]
     }
