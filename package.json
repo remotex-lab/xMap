@@ -1,5 +1,4 @@
 {
-    "type": "module",
     "name": "@remotex-labs/xmap",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
@@ -49,7 +48,7 @@
         "ci:build": "npm run build"
     },
     "devDependencies": {
-        "@remotex-labs/xbuild": "^0.0.1-beta.4",
+        "@remotex-labs/xbuild": "0.0.2-beta.0",
         "@swc/jest": "^0.2.36",
         "@types/jest": "^29.5.12",
         "@types/node": "^22.5.1",
