@@ -3,7 +3,7 @@
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "author": "Garefild",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "license": "Mozilla Public License Version 2.0",
     "description": "A library with a sourcemap parser and TypeScript code formatter for the CLI",
     "homepage": "https://github.com/remotex-lab/xMap",
