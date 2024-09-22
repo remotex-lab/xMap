@@ -2,14 +2,17 @@
  * Import will remove at compile time
  */
 
-import type { MappingInterface, PositionInterface, SourceMapInterface } from '@services/interfaces/source.interface';
+import {
+    Bias,
+    type MappingInterface,
+    type PositionInterface,
+    type SourceMapInterface
+} from '@services/interfaces/source.interface';
 
 /**
  * Imports
  */
-
 import { SourceService } from '@services/source.service';
-import { Bias } from '@services/interfaces/source.interface';
 
 describe('SourceService', () => {
     const validSourceMap: SourceMapInterface = {
@@ -186,6 +189,33 @@ describe('SourceService', () => {
             const position = service.getSourcePosition(6, 9);
 
             expect(mockFindMapping).toHaveBeenCalledWith(6, 9, Bias.LOWER_BOUND);
+            expect(position?.code.trim()).toContain('throw new Error(\'xxxxxxxxxx\')');
+            expect(position).toEqual({
+                code: expect.any(String),
+                line: 3,
+                column: 11,
+                endLine: 7,
+                startLine: 0,
+                name: null,
+                source: 'src/x.spec.ts',
+                sourceRoot: null
+            });
+        });
+
+        test('should return source code for source liane and column of an error', () => {
+            const sourceMap: SourceMapInterface = {
+                'version': 3,
+                'sources': [ 'src/x.spec.ts' ],
+                'sourcesContent': [ 'function name(data: string) {\n    console.log(\'name\' + data);\n    throw new Error(\'xxxxxxxxxx\');\n}\n\nname(\'x\');\n' ],
+                'mappings': ';;;AAAA,SAAS,KAAK,MAAc;AACxB,UAAQ,IAAI,SAAS,IAAI;AACzB,QAAM,IAAI,MAAM,YAAY;AAChC;AAEA,KAAK,GAAG;',
+                'names': []
+            };
+
+            const service = new SourceService(sourceMap);
+            const mockFindMapping = jest.spyOn(service, <any>'findOriginalMapping');
+            const position = service.getSourcePosition(3, 11, {}, true);
+
+            expect(mockFindMapping).toHaveBeenCalledWith(3, 11, Bias.LOWER_BOUND);
             expect(position?.code.trim()).toContain('throw new Error(\'xxxxxxxxxx\')');
             expect(position).toEqual({
                 code: expect.any(String),
@@ -406,6 +436,39 @@ describe('SourceService', () => {
             });
 
             expect(mockFindMapping).toHaveBeenCalledWith(1, 1, Bias.LOWER_BOUND);
+        });
+
+        test('should return position information for a source line', () => {
+            const sourceMap: SourceMapInterface = {
+                version: 3,
+                mappings: '',
+                sources: [ 'source.js' ],
+                names: [ 'functionName' ],
+                sourcesContent: [ 'x' ]
+            };
+            const service = new SourceService(sourceMap);
+
+            const mockMapping: MappingInterface = {
+                fileIndex: 0,
+                sourceLine: 5,
+                sourceColumn: 10,
+                nameIndex: 0,
+                generatedLine: 0,
+                generatedColumn: 0
+            };
+
+            const mockFindMapping = jest.spyOn(service, <any>'findOriginalMapping').mockReturnValueOnce(mockMapping);
+            const position = service.getPosition(5, 10, Bias.LOWER_BOUND, true);
+
+            expect(position).toEqual({
+                line: 5,
+                column: 10,
+                name: 'functionName',
+                source: 'source.js',
+                sourceRoot: null
+            });
+
+            expect(mockFindMapping).toHaveBeenCalledWith(5, 10, Bias.LOWER_BOUND);
         });
     });
 

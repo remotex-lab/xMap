@@ -120,6 +120,7 @@ export class SourceService {
      * Retrieves information about the original source code for a given line and column in the generated code.
      *
      * This method looks up the source code mappings to find the corresponding source location and provides additional context based on the provided options.
+     * It can choose to retrieve either the original mapping or the generated mapping based on the `useSource` flag.
      *
      * @param line - The line number in the generated code.
      * @param column - The column number in the generated code.
@@ -127,6 +128,7 @@ export class SourceService {
      *   - `linesBefore` (default: 3): Number of lines before the matching source line to include in the context.
      *   - `linesAfter` (default: 4): Number of lines after the matching source line to include in the context.
      *   - `includeSourceContent` (default: false): Flag indicating whether to include the relevant source code snippet.
+     * @param useSource - A boolean flag indicating whether to retrieve the original mapping (`true`) or the generated mapping (`false`). Defaults to `false`.
      * @returns An object containing source location information including:
      *   - `line`: The line number in the original source code.
      *   - `column`: The column number in the original source code.
@@ -137,16 +139,20 @@ export class SourceService {
      *   - `code` (if `includeSourceContent` is true): A snippet of the source code surrounding the specified line.
      *
      * @returns Null if no matching mapping is found.
+     *
+     * @example
+     * const position = getSourcePosition(10, 5, { linesBefore: 2, linesAfter: 2 }, true);
+     * console.log(position); // Outputs the source position information or null if not found
      */
 
-    getSourcePosition(line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null {
+    getSourcePosition(line: number, column: number, options?: SourceOptionsInterface, useSource: boolean = false): PositionSourceInterface | null {
         const settings = Object.assign({
             bias: Bias.LOWER_BOUND,
             linesAfter: 4,
             linesBefore: 3
         }, options);
 
-        const map = this.findMapping(line, column, settings.bias);
+        const map = useSource? this.findOriginalMapping(line, column, settings.bias) : this.findMapping(line, column, settings.bias);
         if (!map || isNaN(map.fileIndex)) {
             return null;
         }
@@ -180,11 +186,18 @@ export class SourceService {
      *   - `Bias.LOWER_BOUND` (default): If the line number matches but the column is less, returns the closest mapping with a lower column.
      *   - `Bias.UPPER_BOUND`: If the line number matches but the column is greater, returns the closest mapping with a higher column.
      *   - `Bias.BOUND`: If the line number matches but the column doesn't, returns null (default behavior).
-     * @returns A `PositionInterface` object representing the position in the original source code, or `null` if no matching position is found.
+     * @param useSource - Optional parameter that determines whether to use original source mappings (true) or generated mappings (false). Default is false.
+     * @returns A `PositionInterface` object representing the position in the original source code, including:
+     *   - `line`: The line number in the original source code.
+     *   - `column`: The column number in the original source code.
+     *   - `name`: The function or variable name at the source position, or null if not available.
+     *   - `source`: The file name of the original source code.
+     *   - `sourceRoot`: The root path of the source.
+     *   Returns null if no matching position is found.
      */
 
-    getPosition(line: number, column: number, bias: Bias = Bias.LOWER_BOUND): PositionInterface | null {
-        const map = this.findMapping(line, column, bias);
+    getPosition(line: number, column: number, bias: Bias = Bias.LOWER_BOUND, useSource: boolean = false): PositionInterface | null {
+        const map = useSource? this.findOriginalMapping(line, column, bias) : this.findMapping(line, column, bias);
         if (!map) {
             return map;
         }
@@ -535,22 +548,99 @@ export class SourceService {
     }
 
     /**
-     * Performs a binary search on the internal `mappings` array to locate a mapping based on the line and column information.
-     * This method efficiently searches for a mapping that corresponds to a specific line and column in the generated code,
-     * using binary search for improved performance.
+     * Performs a binary search on the internal `mappings` array to locate a mapping based on the specified line and column information.
+     * This method efficiently searches for a mapping corresponding to a specific line and column, using binary search for improved performance.
      *
-     * The method handles line and column matches and supports optional biasing to refine the search when an exact match is not found:
+     * The method supports optional biasing to refine the search when an exact match is not found:
      * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
      * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
      * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
      *
-     * @param targetLine - The line number in the generated code to search for. This is the primary criterion for the search.
-     * @param targetColumn - The column number in the generated code to search for. This is used in conjunction with the line number.
-     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch is resolved.
+     * @param targetLine - The line number to search for. This is the primary criterion for locating the mapping.
+     * @param targetColumn - The column number to search for. This is used in conjunction with the line number.
+     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
+     *               is resolved.
      *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
      *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
      *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
-     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no appropriate mapping is located.
+     * @param lineAccessor - A function that retrieves the line property from the mapping being examined, allowing for flexibility
+     *                      in accessing either generated or original lines.
+     * @param columnAccessor - A function that retrieves the column property from the mapping being examined, allowing for flexibility
+     *                        in accessing either generated or original columns.
+     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
+     *          appropriate mapping is located.
+     *
+     * @example
+     * const targetLine = 10;
+     * const targetColumn = 5;
+     * const bias = Bias.UPPER_BOUND;
+     * const result = this.findMappingGeneric(targetLine, targetColumn, bias,
+     *     (mapping) => mapping.generatedLine,
+     *     (mapping) => mapping.generatedColumn);
+     * console.log(result); // Outputs the found mapping or null if not found
+     */
+
+    private findMappingGeneric(
+        targetLine: number,
+        targetColumn: number,
+        bias: Bias = Bias.BOUND,
+        lineAccessor: (mapping: MappingInterface) => number,
+        columnAccessor: (mapping: MappingInterface) => number
+    ): MappingInterface | null {
+        let startIndex = 0;
+        let endIndex = this.mappings.length - 1;
+        let closestMapping: MappingInterface | null = null;
+
+        while (startIndex <= endIndex) {
+            const middleIndex = Math.floor((startIndex + endIndex) / 2);
+            const currentMapping = this.mappings[middleIndex];
+            const currentLine = lineAccessor(currentMapping);
+            const currentColumn = columnAccessor(currentMapping);
+
+            if (currentLine < targetLine) {
+                startIndex = middleIndex + 1;
+            } else if (currentLine > targetLine) {
+                endIndex = middleIndex - 1;
+            } else {
+                // The line matches, now handle the column bias
+                if (currentColumn < targetColumn) {
+                    startIndex = middleIndex + 1;
+                    if (bias === Bias.LOWER_BOUND) {
+                        closestMapping = currentMapping;
+                    }
+                } else if (currentColumn > targetColumn) {
+                    endIndex = middleIndex - 1;
+                    if (bias === Bias.UPPER_BOUND) {
+                        closestMapping = currentMapping;
+                    }
+                } else {
+                    return currentMapping; // Exact match found
+                }
+            }
+        }
+
+        // Return the closest mapping if found
+        return closestMapping && lineAccessor(closestMapping) === targetLine ? closestMapping : null;
+    }
+
+    /**
+     * Searches for a mapping in the internal `mappings` array based on the specified line and column information in the generated code.
+     * This method utilizes the `findMappingGeneric` function to perform the search, leveraging its binary search mechanism for efficiency.
+     *
+     * The method supports optional biasing to refine the search when an exact match is not found:
+     * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
+     * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
+     * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
+     *
+     * @param targetLine - The line number in the generated code to search for. This is the primary criterion for locating the mapping.
+     * @param targetColumn - The column number in the generated code to search for. This is used in conjunction with the line number.
+     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
+     *               is resolved.
+     *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
+     *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
+     *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
+     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
+     *          appropriate mapping is located.
      *
      * @example
      * const targetLine = 10;
@@ -561,37 +651,49 @@ export class SourceService {
      */
 
     private findMapping(targetLine: number, targetColumn: number, bias: Bias = Bias.BOUND): MappingInterface | null {
-        let startIndex = 0;
-        let endIndex = this.mappings.length - 1;
-        let closestMapping: MappingInterface | null = null;
+        return this.findMappingGeneric(
+            targetLine,
+            targetColumn,
+            bias,
+            (mapping) => mapping.generatedLine,
+            (mapping) => mapping.generatedColumn
+        );
+    }
 
-        while (startIndex <= endIndex) {
-            const middleIndex = Math.floor((startIndex + endIndex) / 2);
-            const currentMapping = this.mappings[middleIndex];
+    /**
+     * Searches for a mapping in the internal `mappings` array based on the specified line and column information in the original source code.
+     * This method utilizes the `findMappingGeneric` function to perform the search, leveraging its binary search mechanism for efficiency.
+     *
+     * The method supports optional biasing to refine the search when an exact match is not found:
+     * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
+     * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
+     * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
+     *
+     * @param targetLine - The line number in the original source code to search for. This is the primary criterion for locating the mapping.
+     * @param targetColumn - The column number in the original source code to search for. This is used in conjunction with the line number.
+     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
+     *               is resolved.
+     *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
+     *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
+     *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
+     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
+     *          appropriate mapping is located.
+     *
+     * @example
+     * const targetLine = 15;
+     * const targetColumn = 10;
+     * const bias = Bias.LOWER_BOUND;
+     * const result = this.findOriginalMapping(targetLine, targetColumn, bias);
+     * console.log(result); // Outputs the found mapping or null if not found
+     */
 
-            if (currentMapping.generatedLine < targetLine) {
-                startIndex = middleIndex + 1;
-            } else if (currentMapping.generatedLine > targetLine) {
-                endIndex = middleIndex - 1;
-            } else {
-                // The line matches, now we handle the column bias
-                if (currentMapping.generatedColumn < targetColumn) {
-                    startIndex = middleIndex + 1;
-                    if (bias === Bias.LOWER_BOUND) {
-                        closestMapping = currentMapping;
-                    }
-                } else if (currentMapping.generatedColumn > targetColumn) {
-                    endIndex = middleIndex - 1;
-                    if (bias === Bias.UPPER_BOUND) {
-                        closestMapping = currentMapping;
-                    }
-                } else {
-                    return currentMapping;
-                }
-            }
-        }
-
-        // If the line doesn't match any mapping, return null
-        return closestMapping && closestMapping.generatedLine === targetLine ? closestMapping : null;
+    private findOriginalMapping(targetLine: number, targetColumn: number, bias: Bias = Bias.BOUND): MappingInterface | null {
+        return this.findMappingGeneric(
+            targetLine,
+            targetColumn,
+            bias,
+            (mapping) => mapping.sourceLine,
+            (mapping) => mapping.sourceColumn
+        );
     }
 }
