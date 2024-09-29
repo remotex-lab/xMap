@@ -185,7 +185,7 @@ describe('SourceService', () => {
             };
 
             const service = new SourceService(sourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(6, 9);
 
             expect(mockFindMapping).toHaveBeenCalledWith(6, 9, Bias.LOWER_BOUND);
@@ -212,10 +212,10 @@ describe('SourceService', () => {
             };
 
             const service = new SourceService(sourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findOriginalMapping');
-            const position = service.getSourcePosition(3, 11, {}, true);
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
+            const position = service.getSourceCodeByLocation(0, 3, 11, {});
 
-            expect(mockFindMapping).toHaveBeenCalledWith(3, 11, Bias.LOWER_BOUND);
+            expect(mockFindMapping).toHaveBeenCalledWith(3, 11, Bias.LOWER_BOUND, 0, 'sourceLine', 'sourceColumn');
             expect(position?.code.trim()).toContain('throw new Error(\'xxxxxxxxxx\')');
             expect(position).toEqual({
                 code: expect.any(String),
@@ -243,7 +243,7 @@ describe('SourceService', () => {
             };
 
             const service = new SourceService(sourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(10, 5);
 
             expect(position).toBeNull();
@@ -256,7 +256,7 @@ describe('SourceService', () => {
 
         test('should return source information for a valid mapping with LOWER_BOUND', () => {
             const service = new SourceService(validSourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(3, 10);
 
             expect(mockFindMapping).toHaveBeenCalledWith(3, 10, Bias.LOWER_BOUND);
@@ -278,7 +278,7 @@ describe('SourceService', () => {
 
         test('should return NULL for a valid mapping with BOUND and invalid position', () => {
             const service = new SourceService(validSourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(3, 10, { bias: Bias.BOUND });
 
             expect(position).toBeNull();
@@ -291,7 +291,7 @@ describe('SourceService', () => {
 
         test('should return NULL for a valid mapping with BOUND and valid position', () => {
             const service = new SourceService(validSourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(3, 4, { bias: Bias.BOUND });
 
             expect(mockFindMapping).toHaveBeenCalledWith(3, 4, Bias.BOUND);
@@ -309,7 +309,7 @@ describe('SourceService', () => {
 
         test('should return source information for a valid mapping with UPPER_BOUND', () => {
             const service = new SourceService(validSourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getSourcePosition(3, 10, { bias: Bias.UPPER_BOUND });
 
             expect(mockFindMapping).toHaveBeenCalledWith(3, 10, Bias.UPPER_BOUND);
@@ -346,7 +346,7 @@ describe('SourceService', () => {
         });
 
         test('should return correct position with given line, column and bias', () => {
-            const findMappingSpy = jest.spyOn(sourceService as any, 'findMapping').mockReturnValue({
+            const retrieveMappingSpy = jest.spyOn(sourceService as any, 'retrieveMapping').mockReturnValue({
                 sourceLine: 1,
                 sourceColumn: 2,
                 nameIndex: 0,
@@ -357,7 +357,7 @@ describe('SourceService', () => {
 
             const position = sourceService.getPosition(1, 2);
 
-            expect(findMappingSpy).toHaveBeenCalledWith(1, 2, Bias.LOWER_BOUND);
+            expect(retrieveMappingSpy).toHaveBeenCalledWith(1, 2, Bias.LOWER_BOUND);
             expect(position).toEqual<PositionInterface>({
                 line: 1,
                 column: 2,
@@ -368,14 +368,14 @@ describe('SourceService', () => {
         });
 
         test('should return null if no mapping is found', () => {
-            jest.spyOn(sourceService as any, 'findMapping').mockReturnValue(null);
+            jest.spyOn(sourceService as any, 'retrieveMapping').mockReturnValue(null);
             const position = sourceService.getPosition(1, 2);
 
             expect(position).toBeNull();
         });
 
         test('should use specified bias when provided', () => {
-            const findMappingSpy = jest.spyOn(sourceService as any, 'findMapping').mockReturnValue({
+            const retrieveMappingSpy = jest.spyOn(sourceService as any, 'retrieveMapping').mockReturnValue({
                 sourceLine: 1,
                 sourceColumn: 2,
                 nameIndex: 0,
@@ -386,7 +386,7 @@ describe('SourceService', () => {
 
             const position = sourceService.getPosition(1, 2, Bias.UPPER_BOUND);
 
-            expect(findMappingSpy).toHaveBeenCalledWith(1, 2, Bias.UPPER_BOUND);
+            expect(retrieveMappingSpy).toHaveBeenCalledWith(1, 2, Bias.UPPER_BOUND);
             expect(position).toEqual<PositionInterface>({
                 line: 1,
                 column: 2,
@@ -398,7 +398,7 @@ describe('SourceService', () => {
 
         test('should return null if no mapping is found', () => {
             const service = new SourceService(validSourceMap);
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping');
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping');
             const position = service.getPosition(10, 1950);
 
             expect(position).toBeNull();
@@ -424,7 +424,7 @@ describe('SourceService', () => {
                 generatedColumn: 0
             };
 
-            const mockFindMapping = jest.spyOn(service, <any>'findMapping').mockReturnValueOnce(mockMapping);
+            const mockFindMapping = jest.spyOn(service, <any>'retrieveMapping').mockReturnValueOnce(mockMapping);
             const position = service.getPosition(1, 1);
 
             expect(position).toEqual({
@@ -437,42 +437,9 @@ describe('SourceService', () => {
 
             expect(mockFindMapping).toHaveBeenCalledWith(1, 1, Bias.LOWER_BOUND);
         });
-
-        test('should return position information for a source line', () => {
-            const sourceMap: SourceMapInterface = {
-                version: 3,
-                mappings: '',
-                sources: [ 'source.js' ],
-                names: [ 'functionName' ],
-                sourcesContent: [ 'x' ]
-            };
-            const service = new SourceService(sourceMap);
-
-            const mockMapping: MappingInterface = {
-                fileIndex: 0,
-                sourceLine: 5,
-                sourceColumn: 10,
-                nameIndex: 0,
-                generatedLine: 0,
-                generatedColumn: 0
-            };
-
-            const mockFindMapping = jest.spyOn(service, <any>'findOriginalMapping').mockReturnValueOnce(mockMapping);
-            const position = service.getPosition(5, 10, Bias.LOWER_BOUND, true);
-
-            expect(position).toEqual({
-                line: 5,
-                column: 10,
-                name: 'functionName',
-                source: 'source.js',
-                sourceRoot: null
-            });
-
-            expect(mockFindMapping).toHaveBeenCalledWith(5, 10, Bias.LOWER_BOUND);
-        });
     });
 
-    describe('findMapping', () => {
+    describe('retrieveMapping', () => {
         let service: SourceService;
 
         beforeEach(() => {
@@ -499,7 +466,7 @@ describe('SourceService', () => {
         test('should find the exact mapping when it exists', () => {
             const targetLine = 5;
             const targetColumn = 15;
-            const result = service['findMapping'](targetLine, targetColumn);
+            const result = service['retrieveMapping'](targetLine, targetColumn);
 
             expect(result).toEqual({ generatedLine: 5, generatedColumn: 15, fileIndex: 2 });
         });
@@ -507,7 +474,7 @@ describe('SourceService', () => {
         test('should return null if no mapping matches', () => {
             const targetLine = 6;
             const targetColumn = 15;
-            const result = service['findMapping'](targetLine, targetColumn);
+            const result = service['retrieveMapping'](targetLine, targetColumn);
 
             expect(result).toBeNull();
         });
@@ -515,7 +482,7 @@ describe('SourceService', () => {
         test('should handle Bias.LOWER_BOUND correctly', () => {
             const targetLine = 3;
             const targetColumn = 8;
-            const result = service['findMapping'](targetLine, targetColumn, Bias.LOWER_BOUND);
+            const result = service['retrieveMapping'](targetLine, targetColumn, Bias.LOWER_BOUND);
 
             expect(result).toEqual({ generatedLine: 3, generatedColumn: 6, fileIndex: 1 });
         });
@@ -523,7 +490,7 @@ describe('SourceService', () => {
         test('should handle Bias.UPPER_BOUND correctly', () => {
             const targetLine = 3;
             const targetColumn = 8;
-            const result = service['findMapping'](targetLine, targetColumn, Bias.UPPER_BOUND);
+            const result = service['retrieveMapping'](targetLine, targetColumn, Bias.UPPER_BOUND);
 
             expect(result).toEqual({ generatedLine: 3, generatedColumn: 10, fileIndex: 1 });
         });
@@ -532,7 +499,7 @@ describe('SourceService', () => {
             const targetLine = 3;
             const targetColumn = 12;
 
-            const result = service['findMapping'](targetLine, targetColumn);
+            const result = service['retrieveMapping'](targetLine, targetColumn);
 
             expect(result).toBeNull();
         });
@@ -541,7 +508,7 @@ describe('SourceService', () => {
             const targetLine = 4;
             const targetColumn = 12;
 
-            const result = service['findMapping'](targetLine, targetColumn);
+            const result = service['retrieveMapping'](targetLine, targetColumn);
 
             expect(result).toBeNull();
         });
@@ -554,7 +521,7 @@ describe('SourceService', () => {
             ];
             (<any>service).mappings = mappings;
 
-            const position = (<any>service).findMapping(1, 1);
+            const position = (<any>service).retrieveMapping(1, 1);
             expect(position).toEqual(mappings[0]); // Mapping before target line
         });
     });

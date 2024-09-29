@@ -117,67 +117,139 @@ export class SourceService {
     }
 
     /**
-     * Retrieves information about the original source code for a given line and column in the generated code.
+     * Retrieves the source code snippet from the original source based on the specified
+     * file index, line number, and column number. This method provides context for the
+     * specified location in the source code, useful for debugging or inspection purposes.
      *
-     * This method looks up the source code mappings to find the corresponding source location and provides additional context based on the provided options.
-     * It can choose to retrieve either the original mapping or the generated mapping based on the `useSource` flag.
+     * This method can accept both string and numeric file indices. If a string is provided,
+     * it will search for the corresponding index in the list of source file names. If the
+     * index is not found or if an invalid location is provided, it will return null.
      *
-     * @param line - The line number in the generated code.
-     * @param column - The column number in the generated code.
-     * @param options - Optional configuration for retrieving source information.
-     *   - `linesBefore` (default: 3): Number of lines before the matching source line to include in the context.
-     *   - `linesAfter` (default: 4): Number of lines after the matching source line to include in the context.
-     *   - `includeSourceContent` (default: false): Flag indicating whether to include the relevant source code snippet.
-     * @param useSource - A boolean flag indicating whether to retrieve the original mapping (`true`) or the generated mapping (`false`). Defaults to `false`.
-     * @returns An object containing source location information including:
+     * @param fileIndex - The index of the source file (as a number) or the name of the
+     *                    source file (as a string) from which to retrieve the code.
+     *                    If a string is provided, the method will search through the
+     *                    available sources to find the corresponding index.
+     * @param line - The line number in the original source file from which to retrieve
+     *               the code snippet.
+     * @param column - The column number in the original source file that indicates the
+     *                 specific position for the code snippet.
+     * @param options - Optional settings that can customize the behavior of the method:
+     *   - `bias`: Specifies the bias for the mapping retrieval (default is `Bias.LOWER_BOUND`).
+     *   - `linesAfter`: The number of lines to include after the specified line (default is 4).
+     *   - `linesBefore`: The number of lines to include before the specified line (default is 3).
+     *
+     * @returns A `PositionSourceInterface` object containing:
+     *   - `code`: A snippet of the original source code surrounding the specified line and column.
      *   - `line`: The line number in the original source code.
      *   - `column`: The column number in the original source code.
-     *   - `endLine`: The end line number of the included source code snippet.
-     *   - `startLine`: The start line number of the included source code snippet.
-     *   - `name`: The function or variable name at the source position, or null if not available.
-     *   - `source`: The file name of the source code.
-     *   - `code` (if `includeSourceContent` is true): A snippet of the source code surrounding the specified line.
+     *   - `startLine`: The starting line number of the returned source code snippet.
+     *   - `endLine`: The ending line number of the returned source code snippet.
+     *   - `name`: The name of the function or variable at the matched position, if available.
+     *   - `source`: The file name of the original source.
+     *   - `sourceRoot`: The root directory of the original source file.
      *
-     * @returns Null if no matching mapping is found.
+     * @returns Null if no valid source file is found or if no matching position is found
+     *          in the source file.
      *
      * @example
-     * const position = getSourcePosition(10, 5, { linesBefore: 2, linesAfter: 2 }, true);
-     * console.log(position); // Outputs the source position information or null if not found
+     * ```typescript
+     * const sourceCode = getSourceCodeByLocation('app.js', 10, 15);
+     * if (sourceCode) {
+     *     console.log(sourceCode);
+     *     // {
+     *     //   code: 'function example() {...}',
+     *     //   line: 10,
+     *     //   column: 15,
+     *     //   startLine: 7,
+     *     //   endLine: 11,
+     *     //   name: 'example',
+     *     //   source: 'app.js',
+     *     //   sourceRoot: '/src'
+     *     // }
+     * }
+     * ```
      */
 
-    getSourcePosition(line: number, column: number, options?: SourceOptionsInterface, useSource: boolean = false): PositionSourceInterface | null {
+    getSourceCodeByLocation(fileIndex: string, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null;
+    getSourceCodeByLocation(fileIndex: number, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null;
+    getSourceCodeByLocation(fileIndex: number | string, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null {
+        let index  = <number> fileIndex;
+        if (typeof fileIndex === 'string')
+            index = this.sources.findIndex(str => str.includes(fileIndex));
+
+        if (index < 0)
+            return null;
+
         const settings = Object.assign({
             bias: Bias.LOWER_BOUND,
             linesAfter: 4,
             linesBefore: 3
         }, options);
 
-        const map = useSource? this.findOriginalMapping(line, column, settings.bias) : this.findMapping(line, column, settings.bias);
-        if (!map || isNaN(map.fileIndex)) {
-            return null;
-        }
+        const map = this.retrieveMapping(line, column, settings.bias, index, 'sourceLine', 'sourceColumn');
+        
+        return this.getPositionWithSource(map, settings);
+    }
 
-        const code = this.sourcesContent[map.fileIndex].split('\n');
-        const endLine = (map.sourceLine ?? 1) + settings.linesAfter;
-        const startLine = Math.max((map.sourceLine ?? 1) - settings.linesBefore, 0);
-        const relevantCode = code.slice(startLine, Math.min(endLine + 1, code.length)).join('\n');
+    /**
+     * Retrieves the original source location and optional source code snippet for a given line and column in the generated code.
+     *
+     * This function uses the source map to locate the corresponding position in the original source code. Depending on the `options` provided,
+     * it can include a snippet of the original source code surrounding the located position, offering context for debugging purposes.
+     *
+     * @param line - The line number in the generated code.
+     * @param column - The column number in the generated code.
+     * @param options - Optional settings for retrieving the source position and context:
+     *   - `linesBefore` (default: 3): Number of lines before the matched source line to include in the returned snippet.
+     *   - `linesAfter` (default: 4): Number of lines after the matched source line to include in the returned snippet.
+     *   - `includeSourceContent` (default: false): When true, includes a snippet of the source code in the result.
+     *   - `bias` (optional): Determines how to resolve ambiguous mappings (e.g., when there are multiple possible matches for the line/column).
+     *
+     * @returns An object containing detailed source information, including:
+     *   - `line`: The line number in the original source code.
+     *   - `column`: The column number in the original source code.
+     *   - `startLine`: The starting line number of the returned source code snippet.
+     *   - `endLine`: The ending line number of the returned source code snippet.
+     *   - `name`: The name of the function or variable at the matched position, if available.
+     *   - `source`: The file name of the original source.
+     *   - `sourceRoot`: The root directory of the original source file.
+     *   - `code` (if `includeSourceContent` is true): A snippet of the original source code surrounding the specified line and column.
+     *
+     * @returns Null if no matching source position is found.
+     *
+     * @example
+     * ```typescript
+     * const position = getSourcePosition(10, 5, { linesBefore: 2, linesAfter: 2, includeSourceContent: true });
+     * console.log(position);
+     * // {
+     * //   line: 7,
+     * //   column: 15,
+     * //   startLine: 5,
+     * //   endLine: 9,
+     * //   name: 'myFunction',
+     * //   source: 'app.js',
+     * //   sourceRoot: '/src',
+     * //   code: 'function myFunction() {...}'
+     * // }
+     * ```
+     */
 
-        return {
-            code: relevantCode,
-            line: map.sourceLine,
-            name:this.names[map.nameIndex ?? -1] ?? null,
-            column: map.sourceColumn,
-            endLine: endLine,
-            startLine: startLine,
-            source: this.sources[map.fileIndex],
-            sourceRoot: this.sourceRoot
-        };
+    getSourcePosition(line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null {
+        const settings = Object.assign({
+            bias: Bias.LOWER_BOUND,
+            linesAfter: 4,
+            linesBefore: 3
+        }, options);
+
+        const map = this.retrieveMapping(line, column, settings.bias);
+        
+        return this.getPositionWithSource(map, settings);
     }
 
     /**
      * Retrieves the position information in the original source code for a given line and column in the generated code.
      *
-     * This method locates the corresponding source code position based on the provided line and column in the generated code.
+     * This function locates the corresponding position in the original source code based on the provided line and column in the generated code.
      * It uses the specified bias to determine the best match when multiple mappings are possible.
      *
      * @param line - The line number in the generated code.
@@ -185,19 +257,32 @@ export class SourceService {
      * @param bias - Optional parameter specifying how to handle cases where only the line number matches:
      *   - `Bias.LOWER_BOUND` (default): If the line number matches but the column is less, returns the closest mapping with a lower column.
      *   - `Bias.UPPER_BOUND`: If the line number matches but the column is greater, returns the closest mapping with a higher column.
-     *   - `Bias.BOUND`: If the line number matches but the column doesn't, returns null (default behavior).
-     * @param useSource - Optional parameter that determines whether to use original source mappings (true) or generated mappings (false). Default is false.
+     *   - `Bias.BOUND`: If the line number matches but the column doesn't, returns null.
+     *
      * @returns A `PositionInterface` object representing the position in the original source code, including:
      *   - `line`: The line number in the original source code.
      *   - `column`: The column number in the original source code.
-     *   - `name`: The function or variable name at the source position, or null if not available.
+     *   - `name`: The function or variable name at the source position, if available.
      *   - `source`: The file name of the original source code.
-     *   - `sourceRoot`: The root path of the source.
-     *   Returns null if no matching position is found.
+     *   - `sourceRoot`: The root path of the original source code.
+     *   Returns `null` if no matching position is found.
+     *
+     * @example
+     * ```typescript
+     * const position = getPosition(10, 5, Bias.LOWER_BOUND);
+     * console.log(position);
+     * // {
+     * //   line: 7,
+     * //   column: 15,
+     * //   name: 'myFunction',
+     * //   source: 'app.js',
+     * //   sourceRoot: '/src'
+     * // }
+     * ```
      */
 
-    getPosition(line: number, column: number, bias: Bias = Bias.LOWER_BOUND, useSource: boolean = false): PositionInterface | null {
-        const map = useSource? this.findOriginalMapping(line, column, bias) : this.findMapping(line, column, bias);
+    getPosition(line: number, column: number, bias: Bias = Bias.LOWER_BOUND): PositionInterface | null {
+        const map = this.retrieveMapping(line, column, bias);
         if (!map) {
             return map;
         }
@@ -265,6 +350,76 @@ export class SourceService {
 
     toString(): string {
         return JSON.stringify(this.getMapObject());
+    }
+
+    /**
+     * Retrieves the position information in the original source code along with a snippet
+     * of the surrounding source code based on the provided mapping.
+     *
+     * This method takes a mapping object that represents a position in the generated code
+     * and locates the corresponding position in the original source code. It extracts a
+     * relevant code snippet surrounding the identified position, providing context for
+     * debugging or inspection purposes.
+     *
+     * @param map - A `MappingInterface` object representing the mapping from the generated
+     *              code to the original source code. If the mapping is null or invalid,
+     *              the method will return null.
+     * @param settings - An object containing configuration options for retrieving the
+     *                   surrounding code snippet, including:
+     *   - `linesAfter`: The number of lines to include after the specified line (default is 4).
+     *   - `linesBefore`: The number of lines to include before the specified line (default is 3).
+     *
+     * @returns An object containing detailed source information, including:
+     *   - `line`: The line number in the original source code.
+     *   - `column`: The column number in the original source code.
+     *   - `startLine`: The starting line number of the returned source code snippet.
+     *   - `endLine`: The ending line number of the returned source code snippet.
+     *   - `name`: The name of the function or variable at the matched position, if available.
+     *   - `source`: The file name of the original source.
+     *   - `sourceRoot`: The root directory of the original source file.
+     *   - `code`: A snippet of the original source code surrounding the specified line and column.
+     *
+     * @returns Null if no valid mapping is provided or if no matching source position is found.
+     *
+     * @example
+     * ```typescript
+     * const positionInfo = getPositionWithSource(mapping, { linesAfter: 4, linesBefore: 3 });
+     * if (positionInfo) {
+     *     console.log(positionInfo);
+     *     // {
+     *     //   code: 'function myFunction() {...}',
+     *     //   line: 7,
+     *     //   column: 15,
+     *     //   startLine: 5,
+     *     //   endLine: 9,
+     *     //   name: 'myFunction',
+     *     //   source: 'app.js',
+     *     //   sourceRoot: '/src'
+     *     // }
+     * }
+     * ```
+     */
+
+    private getPositionWithSource(map: MappingInterface | null, settings: Required<SourceOptionsInterface>): PositionSourceInterface | null  {
+        if (!map || isNaN(map.fileIndex)) {
+            return null;
+        }
+
+        const code = this.sourcesContent[map.fileIndex].split('\n');
+        const endLine = (map.sourceLine ?? 1) + settings.linesAfter;
+        const startLine = Math.max((map.sourceLine ?? 1) - settings.linesBefore, 0);
+        const relevantCode = code.slice(startLine, Math.min(endLine + 1, code.length)).join('\n');
+
+        return {
+            code: relevantCode,
+            line: map.sourceLine,
+            name:this.names[map.nameIndex ?? -1] ?? null,
+            column: map.sourceColumn,
+            endLine: endLine,
+            startLine: startLine,
+            source: this.sources[map.fileIndex],
+            sourceRoot: this.sourceRoot
+        };
     }
 
     /**
@@ -521,6 +676,8 @@ export class SourceService {
      * @see encodeArrayVLQ for the encoding function used.
      */
 
+
+
     private encodeSegment(map: MappingInterface, segments: Array<string>, shift: ShiftSegmentInterface): void {
         const segment: Array<number> = [];
         const sourceIndex = map.fileIndex;
@@ -548,44 +705,52 @@ export class SourceService {
     }
 
     /**
-     * Performs a binary search on the internal `mappings` array to locate a mapping based on the specified line and column information.
-     * This method efficiently searches for a mapping corresponding to a specific line and column, using binary search for improved performance.
+     * Determines whether a mapping should be skipped based on the specified file index.
      *
-     * The method supports optional biasing to refine the search when an exact match is not found:
-     * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
-     * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
-     * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
+     * This function checks if the given mapping's file index matches the provided file index.
+     * If the file index is not -1 (which indicates that filtering is desired),
+     * the function returns true if the mapping's file index does not match the specified file index.
      *
-     * @param targetLine - The line number to search for. This is the primary criterion for locating the mapping.
-     * @param targetColumn - The column number to search for. This is used in conjunction with the line number.
-     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
-     *               is resolved.
-     *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
-     *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
-     *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
-     * @param lineAccessor - A function that retrieves the line property from the mapping being examined, allowing for flexibility
-     *                      in accessing either generated or original lines.
-     * @param columnAccessor - A function that retrieves the column property from the mapping being examined, allowing for flexibility
-     *                        in accessing either generated or original columns.
-     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
-     *          appropriate mapping is located.
+     * @param mapping - The mapping object to evaluate.
+     * @param fileIndex - The file index to compare against the mapping's file index.
+     *                   A value of -1 indicates that no filtering should occur.
      *
-     * @example
-     * const targetLine = 10;
-     * const targetColumn = 5;
-     * const bias = Bias.UPPER_BOUND;
-     * const result = this.findMappingGeneric(targetLine, targetColumn, bias,
-     *     (mapping) => mapping.generatedLine,
-     *     (mapping) => mapping.generatedColumn);
-     * console.log(result); // Outputs the found mapping or null if not found
+     * @returns True if the mapping should be skipped, otherwise false.
      */
 
-    private findMappingGeneric(
-        targetLine: number,
-        targetColumn: number,
+    private shouldSkipMapping(mapping: MappingInterface, fileIndex: number): boolean {
+        return fileIndex !== -1 && mapping.fileIndex !== fileIndex;
+    }
+
+    /**
+     * Retrieves the closest mapping from the mappings array based on the specified line and column.
+     *
+     * This function performs a binary search to find the mapping that corresponds to the given line and column
+     * parameters. It takes into account the specified bias for the column in case of a tie in the line number,
+     * and can also filter results by a specific file index if provided.
+     *
+     * @param line - The target line number to search for in the mappings.
+     * @param column - The target column number to search for in the mappings.
+     * @param bias - The bias to use when the line matches; it can be:
+     *               - Bias.BOUND (default): No preference for column matching.
+     *               - Bias.LOWER_BOUND: Prefer the closest mapping with a lower column value.
+     *               - Bias.UPPER_BOUND: Prefer the closest mapping with a higher column value.
+     * @param fileIndex - The index of the file to filter the mappings by. If set to -1, no filtering is applied.
+     * @param lineKey - The key to access the line number in the mapping object.
+     *                  Can be either 'generatedLine' or 'sourceLine'.
+     * @param columnKey - The key to access the column number in the mapping object.
+     *                    Can be either 'generatedColumn' or 'sourceColumn'.
+     *
+     * @returns The closest matching MappingInterface object, or null if no matching mapping is found.
+     */
+
+    private retrieveMapping(
+        line: number,
+        column: number,
         bias: Bias = Bias.BOUND,
-        lineAccessor: (mapping: MappingInterface) => number,
-        columnAccessor: (mapping: MappingInterface) => number
+        fileIndex: number = -1,
+        lineKey: 'generatedLine' | 'sourceLine' = 'generatedLine',
+        columnKey: 'generatedColumn' | 'sourceColumn' = 'generatedColumn'
     ): MappingInterface | null {
         let startIndex = 0;
         let endIndex = this.mappings.length - 1;
@@ -594,106 +759,34 @@ export class SourceService {
         while (startIndex <= endIndex) {
             const middleIndex = Math.floor((startIndex + endIndex) / 2);
             const currentMapping = this.mappings[middleIndex];
-            const currentLine = lineAccessor(currentMapping);
-            const currentColumn = columnAccessor(currentMapping);
 
-            if (currentLine < targetLine) {
+            if (this.shouldSkipMapping(currentMapping, fileIndex)) {
                 startIndex = middleIndex + 1;
-            } else if (currentLine > targetLine) {
+                continue;
+            }
+
+            const currentLine = currentMapping[lineKey];
+            const currentColumn = currentMapping[columnKey];
+
+            if (currentLine < line) {
+                startIndex = middleIndex + 1;
+            } else if (currentLine > line) {
                 endIndex = middleIndex - 1;
             } else {
-                // The line matches, now handle the column bias
-                if (currentColumn < targetColumn) {
+                // Handle column bias when line matches
+                if (currentColumn < column) {
+                    closestMapping = bias === Bias.LOWER_BOUND ? currentMapping : closestMapping;
                     startIndex = middleIndex + 1;
-                    if (bias === Bias.LOWER_BOUND) {
-                        closestMapping = currentMapping;
-                    }
-                } else if (currentColumn > targetColumn) {
+                } else if (currentColumn > column) {
+                    closestMapping = bias === Bias.UPPER_BOUND ? currentMapping : closestMapping;
                     endIndex = middleIndex - 1;
-                    if (bias === Bias.UPPER_BOUND) {
-                        closestMapping = currentMapping;
-                    }
                 } else {
                     return currentMapping; // Exact match found
                 }
             }
         }
 
-        // Return the closest mapping if found
-        return closestMapping && lineAccessor(closestMapping) === targetLine ? closestMapping : null;
-    }
-
-    /**
-     * Searches for a mapping in the internal `mappings` array based on the specified line and column information in the generated code.
-     * This method utilizes the `findMappingGeneric` function to perform the search, leveraging its binary search mechanism for efficiency.
-     *
-     * The method supports optional biasing to refine the search when an exact match is not found:
-     * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
-     * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
-     * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
-     *
-     * @param targetLine - The line number in the generated code to search for. This is the primary criterion for locating the mapping.
-     * @param targetColumn - The column number in the generated code to search for. This is used in conjunction with the line number.
-     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
-     *               is resolved.
-     *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
-     *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
-     *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
-     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
-     *          appropriate mapping is located.
-     *
-     * @example
-     * const targetLine = 10;
-     * const targetColumn = 5;
-     * const bias = Bias.UPPER_BOUND;
-     * const result = this.findMapping(targetLine, targetColumn, bias);
-     * console.log(result); // Outputs the found mapping or null if not found
-     */
-
-    private findMapping(targetLine: number, targetColumn: number, bias: Bias = Bias.BOUND): MappingInterface | null {
-        return this.findMappingGeneric(
-            targetLine,
-            targetColumn,
-            bias,
-            (mapping) => mapping.generatedLine,
-            (mapping) => mapping.generatedColumn
-        );
-    }
-
-    /**
-     * Searches for a mapping in the internal `mappings` array based on the specified line and column information in the original source code.
-     * This method utilizes the `findMappingGeneric` function to perform the search, leveraging its binary search mechanism for efficiency.
-     *
-     * The method supports optional biasing to refine the search when an exact match is not found:
-     * - **Bias.LOWER_BOUND**: If the line number matches but the column is less, returns the closest mapping with a lower column.
-     * - **Bias.UPPER_BOUND**: If the line number matches but the column is greater, returns the closest mapping with a higher column.
-     * - **Bias.BOUND**: If the line number matches but the column doesn't, returns null. This is the default behavior.
-     *
-     * @param targetLine - The line number in the original source code to search for. This is the primary criterion for locating the mapping.
-     * @param targetColumn - The column number in the original source code to search for. This is used in conjunction with the line number.
-     * @param bias - An optional bias value to handle cases where only the line number matches. It influences how the column mismatch
-     *               is resolved.
-     *               - `Bias.LOWER_BOUND`: Return the closest mapping with a lower column if the exact column is not found.
-     *               - `Bias.UPPER_BOUND`: Return the closest mapping with a higher column if the exact column is not found.
-     *               - `Bias.BOUND`: Return null if no exact column match is found. (Default behavior)
-     * @returns A `MappingInterface` object representing the found mapping if an exact or biased match is found, or null if no
-     *          appropriate mapping is located.
-     *
-     * @example
-     * const targetLine = 15;
-     * const targetColumn = 10;
-     * const bias = Bias.LOWER_BOUND;
-     * const result = this.findOriginalMapping(targetLine, targetColumn, bias);
-     * console.log(result); // Outputs the found mapping or null if not found
-     */
-
-    private findOriginalMapping(targetLine: number, targetColumn: number, bias: Bias = Bias.BOUND): MappingInterface | null {
-        return this.findMappingGeneric(
-            targetLine,
-            targetColumn,
-            bias,
-            (mapping) => mapping.sourceLine,
-            (mapping) => mapping.sourceColumn
-        );
+        // Return the closest mapping if it matches the specified line
+        return closestMapping && closestMapping[lineKey] === line ? closestMapping : null;
     }
 }
