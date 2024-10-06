@@ -187,7 +187,7 @@ export class SourceService {
         }, options);
 
         const map = this.retrieveMapping(line, column, settings.bias, index, 'sourceLine', 'sourceColumn');
-        
+
         return this.getPositionWithSource(map, settings);
     }
 
@@ -242,7 +242,7 @@ export class SourceService {
         }, options);
 
         const map = this.retrieveMapping(line, column, settings.bias);
-        
+
         return this.getPositionWithSource(map, settings);
     }
 
@@ -324,12 +324,12 @@ export class SourceService {
             this.sourcesContent.push(...map.sourcesContent);
 
             const lastSegment = this.mappings[this.mappings.length - 1];
-            const lines = this.sourcesContent[lastSegment.fileIndex].split('\n').length;
+            const lines = lastSegment.generatedLine + 1;
 
             this.decodeMappings(maps[0].mappings, {
-                nameIndex: this.names.length - 1,
+                nameIndex: this.names.length - 1, // todo way ?
                 fileIndex: this.sources.length - 1,
-                generatedLine: lines < 2 ? 2 : lines
+                generatedLine: lines
             });
         }
     }

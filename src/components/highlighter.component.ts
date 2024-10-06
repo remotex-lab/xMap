@@ -394,7 +394,6 @@ export function highlightCode(code: string, schema: Partial<HighlightSchemeInter
 
     function walk(node: ts.Node): void {
         codeHighlighter.parseNode(node);
-
         for (let i = 0; i < node.getChildCount(); i++) {
             walk(node.getChildAt(i));
         }
