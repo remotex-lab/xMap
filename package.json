@@ -1,7 +1,9 @@
 {
     "name": "@remotex-labs/xmap",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "dist/cjs/index.js",
+    "type": "module",
+    "types": "./dist/cjs/index.d.ts",
+    "module": "./dist/esm/index.js",
     "author": "Garefild",
     "version": "v1.0.0-local",
     "license": "Mozilla Public License Version 2.0",
@@ -32,6 +34,19 @@
     "engines": {
         "node": ">=18"
     },
+    "exports": {
+        "./package.json": "./package.json",
+        ".": {
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.js"
+            }
+        }
+    },
     "files": [
         "dist",
         "LICENSE",
@@ -40,7 +55,7 @@
     "scripts": {
         "dev": "xBuild -w",
         "test": "jest",
-        "build": "xBuild",
+        "build": "xBuild && xbuild -c xbuild.cjs.ts",
         "test:coverage": "jest --coverage",
         "lint": "xbuild --tc && eslint . -c ./eslint.config.mjs",
         "ci:test": "jest",
