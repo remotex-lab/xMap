@@ -3,32 +3,52 @@
  */
 
 import type {
-    MappingInterface,
     PositionInterface,
     SourceMapInterface,
-    ShiftSegmentInterface,
     SourceOptionsInterface,
-    PositionSourceInterface,
-    ThresholdSegmentInterface
+    PositionWithCodeInterface,
+    PositionWithContentInterface
 } from '@services/interfaces/source.interface';
 
 /**
  * Imports
  */
 
-import { Bias } from '@services/interfaces/source.interface';
-import { decodeVLQ, encodeArrayVLQ } from '@components/base64.component';
+import { MappingProvider } from '@providers/mapping.provider';
+import { Bias } from '@providers/interfaces/mapping.interface';
 
 /**
  * A service for validating and processing source maps.
+ * This class allows parsing and manipulation of source maps, providing functionality such as
+ * retrieving position mappings between original and generated code, concatenating source maps,
+ * and getting code snippets based on mappings.
+ *
+ * @example
+ * ```ts
+ * const sourceMapJSON = '{"version": 3, "file": "bundle.js", "sources": ["foo.ts"], "names": [], "mappings": "AAAA"}';
+ * const sourceService = new SourceService(sourceMapJSON);
+ *
+ * console.log(sourceService.file); // Outputs: 'bundle.js'
+ * ```
  */
 
 export class SourceService {
     /**
      * The name of the generated file (bundle) that this source map applies to.
+     *
+     * @example
+     * ```ts
+     * console.log(sourceService.file); // 'bundle.js'
+     * ```
      */
 
     readonly file: string | null;
+
+    /**
+     * A MappingProvider instance of base64 VLQ-encoded mappings.
+     */
+
+    readonly mappings: MappingProvider;
 
     /**
      * The root URL for the sources, if present in the source map.
@@ -40,62 +60,69 @@ export class SourceService {
      * A list of symbol names used by the “mappings” entry.
      */
 
-    private readonly names: Array<string>;
+    readonly names: Array<string>;
 
     /**
      * An array of source file paths.
      */
 
-    private readonly sources: Array<string>;
-
-    /**
-     * A string of base64 VLQ-encoded mappings.
-     */
-
-    private readonly mappings: Array<MappingInterface>;
+    readonly sources: Array<string>;
 
     /**
      * An array of source files contents.
      */
 
-    private readonly sourcesContent: Array<string>;
+    readonly sourcesContent: Array<string>;
 
     /**
-     * Creates a new instance of the SourceService class.
+     * Creates a new instance of the `SourceService` class.
      *
-     * This constructor initializes a `SourceService` instance using the provided source map object.
-     * It performs validation to ensure that the source map contains all required properties.
+     * This constructor initializes the class using either a `SourceMapInterface` object,
+     * a JSON string representing the source map, or an existing `SourceService` instance.
+     * It validates the source map and populates its properties such as `file`, `sources`, and `mappings`.
      *
-     * @param source - An object conforming to the `SourceMapInterface` representing the source map to be validated and processed.
-     * @throws Error If any required property is missing from the source map object.
+     * @param source - Can be one of the following:
+     *   - An object conforming to the `SourceMapInterface`.
+     *   - A JSON string representing the source map.
+     *   - A `SourceService` instance to copy the properties.
+     * @param file - (Optional) A string representing the file name of the generated bundle.
+     *               Defaults to `null`. It will overwrite any existing `file` property in the source map.
+     * @throws {Error} - If the source map does not contain required properties or has an invalid format.
+     *
+     * @example
+     * ```ts
+     * const sourceMapJSON = '{"version": 3, "file": "bundle.js", "sources": ["foo.ts"], "names": [], "mappings": "AAAA"}';
+     * const sourceService = new SourceService(sourceMapJSON);
+     * ```
      */
 
-    constructor(source: SourceMapInterface) {
-        this.validateSourceMap(source);
+    constructor(source: SourceService);
+    constructor(source: SourceMapInterface | string, file?: string | null);
+    constructor(source: SourceService | SourceMapInterface | string, file: string | null = null) {
+        if (typeof source === 'string') {
+            source = <SourceMapInterface> JSON.parse(source);
+        }
 
-        this.file = source.file ?? null;
-        this.names = source.names ?? [];
-        this.sources = source.sources ?? [];
-        this.mappings = [];
+        source = <SourceMapInterface> source;
+        this.validateSourceMap(source);
+        this.file = source.file ?? file;
+        this.names =  [ ...source.names ?? [] ];
+        this.sources = [ ...source.sources ?? [] ];
         this.sourceRoot = source.sourceRoot ?? null;
-        this.sourcesContent = source.sourcesContent ?? [];
-        this.decodeMappings(source.mappings);
+        this.sourcesContent = source.sourcesContent ? [ ...source.sourcesContent ] : [];;
+        this.mappings = new MappingProvider(source.mappings);
     }
 
     /**
-     * Returns a plain object representation of the source map data.
+     * Converts the current source map data into a plain object format.
      *
-     * This method constructs and returns an object that includes key properties of the source map:
-     * - `version`: The version of the source map specification (typically 3).
-     * - `file`: The name of the generated file (optional).
-     * - `names`: An array of function or variable names extracted from the original source code.
-     * - `sources`: An array of file paths for the source files referenced in the mappings.
-     * - `sourceRoot`: An optional root URL for resolving source file paths.
-     * - `mappings`: A base64 VLQ-encoded string representing the source map mappings, generated by `encodeMappings`.
-     * - `sourcesContent`: An optional array containing the content of the source files. This property may not be present in all source maps.
+     * @returns The source map json object.
      *
-     * @returns A plain object conforming to the `SourceMapInterface` structure,
-     *                               representing the source map data.
+     * @example
+     * ```ts
+     * const mapObject = sourceService.getMapObject();
+     * console.log(mapObject.file); // 'bundle.js'
+     * ```
      */
 
     getMapObject(): SourceMapInterface {
@@ -103,11 +130,11 @@ export class SourceService {
             version: 3,
             names: this.names,
             sources: this.sources,
-            mappings: this.encodeMappings(this.mappings),
+            mappings: this.mappings.encode(),
             sourcesContent: this.sourcesContent
         };
 
-        if(this.file)
+        if (this.file)
             sourceMap.file = this.file;
 
         if (this.sourceRoot)
@@ -117,309 +144,214 @@ export class SourceService {
     }
 
     /**
-     * Retrieves the source code snippet from the original source based on the specified
-     * file index, line number, and column number. This method provides context for the
-     * specified location in the source code, useful for debugging or inspection purposes.
+     * Concatenates one or more source maps to the current source map.
      *
-     * This method can accept both string and numeric file indices. If a string is provided,
-     * it will search for the corresponding index in the list of source file names. If the
-     * index is not found or if an invalid location is provided, it will return null.
+     * This method merges additional source maps into the current source map,
+     * updating the `mappings`, `names`, `sources`, and `sourcesContent` arrays.
      *
-     * @param fileIndex - The index of the source file (as a number) or the name of the
-     *                    source file (as a string) from which to retrieve the code.
-     *                    If a string is provided, the method will search through the
-     *                    available sources to find the corresponding index.
-     * @param line - The line number in the original source file from which to retrieve
-     *               the code snippet.
-     * @param column - The column number in the original source file that indicates the
-     *                 specific position for the code snippet.
-     * @param options - Optional settings that can customize the behavior of the method:
-     *   - `bias`: Specifies the bias for the mapping retrieval (default is `Bias.LOWER_BOUND`).
-     *   - `linesAfter`: The number of lines to include after the specified line (default is 4).
-     *   - `linesBefore`: The number of lines to include before the specified line (default is 3).
-     *
-     * @returns A `PositionSourceInterface` object containing:
-     *   - `code`: A snippet of the original source code surrounding the specified line and column.
-     *   - `line`: The line number in the original source code.
-     *   - `column`: The column number in the original source code.
-     *   - `startLine`: The starting line number of the returned source code snippet.
-     *   - `endLine`: The ending line number of the returned source code snippet.
-     *   - `name`: The name of the function or variable at the matched position, if available.
-     *   - `source`: The file name of the original source.
-     *   - `sourceRoot`: The root directory of the original source file.
-     *
-     * @returns Null if no valid source file is found or if no matching position is found
-     *          in the source file.
+     * @param maps - An array of `SourceMapInterface` or `SourceService` instances to be concatenated.
+     * @throws { Error } If no source maps are provided for concatenation.
      *
      * @example
-     * ```typescript
-     * const sourceCode = getSourceCodeByLocation('app.js', 10, 15);
-     * if (sourceCode) {
-     *     console.log(sourceCode);
-     *     // {
-     *     //   code: 'function example() {...}',
-     *     //   line: 10,
-     *     //   column: 15,
-     *     //   startLine: 7,
-     *     //   endLine: 11,
-     *     //   name: 'example',
-     *     //   source: 'app.js',
-     *     //   sourceRoot: '/src'
-     *     // }
-     * }
+     * ```ts
+     * sourceService.concat(anotherSourceMap);
+     * console.log(sourceService.sources); // Updated source paths
      * ```
      */
 
-    getSourceCodeByLocation(fileIndex: string, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null;
-    getSourceCodeByLocation(fileIndex: number, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null;
-    getSourceCodeByLocation(fileIndex: number | string, line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null {
-        let index  = <number> fileIndex;
-        if (typeof fileIndex === 'string')
-            index = this.sources.findIndex(str => str.includes(fileIndex));
+    concat(...maps: Array<SourceMapInterface | SourceService>): void {
+        if (maps.length < 1)
+            throw new Error('At least one map must be provided for concatenation.');
+
+        for (const map of (maps as Array<SourceMapInterface>)) {
+            this.mappings.decode(map.mappings, this.names.length, this.sources.length);
+            this.names.push(...map.names);
+            this.sources.push(...map.sources);
+            this.sourcesContent.push(...map.sourcesContent ?? []);
+        }
+    }
+
+    /**
+     * Creates a new instance of `SourceService` with concatenated source maps.
+     *
+     * @param maps - An array of `SourceMapInterface` or `SourceService` instances to be concatenated.
+     * @returns { SourceService } A new `SourceService` instance with the concatenated maps.
+     * @throws { Error } If no source maps are provided.
+     *
+     * @example
+     * ```ts
+     * const newService = sourceService.concatNewMap(anotherSourceMap);
+     * console.log(newService.file); // The file from the new source map
+     * ```
+     */
+
+    concatNewMap(...maps: Array<SourceMapInterface | SourceService>): SourceService {
+        if (maps.length < 1)
+            throw new Error('At least one map must be provided for concatenation.');
+
+        const sourceService = new SourceService(this);
+        for (const map of (maps as Array<SourceMapInterface>)) {
+            sourceService.mappings.decode(map.mappings, sourceService.names.length, sourceService.sources.length);
+            sourceService.names.push(...map.names);
+            sourceService.sources.push(...map.sources);
+            sourceService.sourcesContent.push(...map.sourcesContent ?? []);
+        }
+
+        return sourceService;
+    }
+
+    /**
+     * Retrieves the position information based on the original source line and column.
+     *
+     * @param line - The line number in the generated code.
+     * @param column - The column number in the generated code.
+     * @param sourceIndex - The index or file path of the original source.
+     * @param bias - The bias to use when matching positions (`Bias.LOWER_BOUND`, `Bias.UPPER_BOUND`, or `Bias.BOUND`).
+     * @returns { PositionInterface | null } The corresponding position in the original source, or `null` if not found.
+     *
+     * @example
+     * ```ts
+     * const position = sourceService.getPositionByOriginal(1, 10, 'foo.ts');
+     * console.log(position?.line); // The line number in the original source
+     * ```
+     */
+
+    getPositionByOriginal(line: number, column: number, sourceIndex: number | string, bias: Bias = Bias.BOUND): PositionInterface | null {
+        let index = <number> sourceIndex;
+        if (typeof sourceIndex === 'string')
+            index = this.sources.findIndex(str => str.includes(sourceIndex));
 
         if (index < 0)
             return null;
 
-        const settings = Object.assign({
-            bias: Bias.LOWER_BOUND,
-            linesAfter: 4,
-            linesBefore: 3
-        }, options);
-
-        const map = this.retrieveMapping(line, column, settings.bias, index, 'sourceLine', 'sourceColumn');
-        
-        return this.getPositionWithSource(map, settings);
-    }
-
-    /**
-     * Retrieves the original source location and optional source code snippet for a given line and column in the generated code.
-     *
-     * This function uses the source map to locate the corresponding position in the original source code. Depending on the `options` provided,
-     * it can include a snippet of the original source code surrounding the located position, offering context for debugging purposes.
-     *
-     * @param line - The line number in the generated code.
-     * @param column - The column number in the generated code.
-     * @param options - Optional settings for retrieving the source position and context:
-     *   - `linesBefore` (default: 3): Number of lines before the matched source line to include in the returned snippet.
-     *   - `linesAfter` (default: 4): Number of lines after the matched source line to include in the returned snippet.
-     *   - `includeSourceContent` (default: false): When true, includes a snippet of the source code in the result.
-     *   - `bias` (optional): Determines how to resolve ambiguous mappings (e.g., when there are multiple possible matches for the line/column).
-     *
-     * @returns An object containing detailed source information, including:
-     *   - `line`: The line number in the original source code.
-     *   - `column`: The column number in the original source code.
-     *   - `startLine`: The starting line number of the returned source code snippet.
-     *   - `endLine`: The ending line number of the returned source code snippet.
-     *   - `name`: The name of the function or variable at the matched position, if available.
-     *   - `source`: The file name of the original source.
-     *   - `sourceRoot`: The root directory of the original source file.
-     *   - `code` (if `includeSourceContent` is true): A snippet of the original source code surrounding the specified line and column.
-     *
-     * @returns Null if no matching source position is found.
-     *
-     * @example
-     * ```typescript
-     * const position = getSourcePosition(10, 5, { linesBefore: 2, linesAfter: 2, includeSourceContent: true });
-     * console.log(position);
-     * // {
-     * //   line: 7,
-     * //   column: 15,
-     * //   startLine: 5,
-     * //   endLine: 9,
-     * //   name: 'myFunction',
-     * //   source: 'app.js',
-     * //   sourceRoot: '/src',
-     * //   code: 'function myFunction() {...}'
-     * // }
-     * ```
-     */
-
-    getSourcePosition(line: number, column: number, options?: SourceOptionsInterface): PositionSourceInterface | null {
-        const settings = Object.assign({
-            bias: Bias.LOWER_BOUND,
-            linesAfter: 4,
-            linesBefore: 3
-        }, options);
-
-        const map = this.retrieveMapping(line, column, settings.bias);
-        
-        return this.getPositionWithSource(map, settings);
-    }
-
-    /**
-     * Retrieves the position information in the original source code for a given line and column in the generated code.
-     *
-     * This function locates the corresponding position in the original source code based on the provided line and column in the generated code.
-     * It uses the specified bias to determine the best match when multiple mappings are possible.
-     *
-     * @param line - The line number in the generated code.
-     * @param column - The column number in the generated code.
-     * @param bias - Optional parameter specifying how to handle cases where only the line number matches:
-     *   - `Bias.LOWER_BOUND` (default): If the line number matches but the column is less, returns the closest mapping with a lower column.
-     *   - `Bias.UPPER_BOUND`: If the line number matches but the column is greater, returns the closest mapping with a higher column.
-     *   - `Bias.BOUND`: If the line number matches but the column doesn't, returns null.
-     *
-     * @returns A `PositionInterface` object representing the position in the original source code, including:
-     *   - `line`: The line number in the original source code.
-     *   - `column`: The column number in the original source code.
-     *   - `name`: The function or variable name at the source position, if available.
-     *   - `source`: The file name of the original source code.
-     *   - `sourceRoot`: The root path of the original source code.
-     *   Returns `null` if no matching position is found.
-     *
-     * @example
-     * ```typescript
-     * const position = getPosition(10, 5, Bias.LOWER_BOUND);
-     * console.log(position);
-     * // {
-     * //   line: 7,
-     * //   column: 15,
-     * //   name: 'myFunction',
-     * //   source: 'app.js',
-     * //   sourceRoot: '/src'
-     * // }
-     * ```
-     */
-
-    getPosition(line: number, column: number, bias: Bias = Bias.LOWER_BOUND): PositionInterface | null {
-        const map = this.retrieveMapping(line, column, bias);
-        if (!map) {
-            return map;
-        }
+        const segment = this.mappings.getOriginalSegment(line, column, index, bias);
+        if (!segment)
+            return null;
 
         return {
-            line: map.sourceLine,
-            name: this.names[map.nameIndex ?? -1] ?? null,
-            column: map.sourceColumn,
-            source: this.sources[map.fileIndex],
-            sourceRoot: this.sourceRoot
+            name: this.names[segment.nameIndex ?? -1] ?? null,
+            line: segment.line,
+            column: segment.column,
+            source: this.sources[segment.sourceIndex],
+            sourceRoot: this.sourceRoot,
+            sourceIndex: segment.sourceIndex,
+            generatedLine: segment.generatedLine,
+            generatedColumn: segment.generatedColumn
         };
     }
 
     /**
-     * Merges multiple source maps into this source map object.
-     * The order of the provided source maps must correspond to the order in which the source files were concatenated.
+     * Retrieves the position in the original source code based on a given line and column
+     * in the generated code.
      *
-     * This method appends the names, sources, and source contents from each provided source map to the current source map.
-     * It also adjusts the mappings to account for the concatenation of the source files.
-     *
-     * @param maps - An array of `SourceMapInterface` instances representing the source maps to be merged.
-     * @throws Error If no source maps are provided for concatenation.
+     * @param line - Line number in the generated code.
+     * @param column - Column number in the generated code.
+     * @param bias - The bias to use for matching positions. Defaults to `Bias.BOUND`.
+     * @returns {PositionInterface | null} The position in the original source, or null if not found.
      *
      * @example
-     * // Merging two source maps
-     * const map1: SourceMapInterface = { /* ... *\/ };
-     * const map2: SourceMapInterface = { /* ... *\/ };
-     * sourceMapService.concat(map1, map2);
+     * ```ts
+     * const position = sourceService.getPosition(2, 15);
+     * console.log(position?.source); // The original source file
+     * ```
      */
 
-    concat(...maps: Array<SourceMapInterface>): void {
-        if (maps.length < 1) {
-            throw new Error('At least one map must be provided for concatenation.');
-        }
+    getPosition(line: number, column: number, bias: Bias = Bias.BOUND): PositionInterface | null {
+        const segment = this.mappings.getSegment(line, column, bias);
+        if (!segment)
+            return null;
 
-        for (const map of maps) {
-            this.names.push(...map.names);
-            this.sources.push(...map.sources);
-            this.sourcesContent.push(...map.sourcesContent);
-
-            const lastSegment = this.mappings[this.mappings.length - 1];
-            const lines = this.sourcesContent[lastSegment.fileIndex].split('\n').length;
-
-            this.decodeMappings(maps[0].mappings, {
-                nameIndex: this.names.length - 1,
-                fileIndex: this.sources.length - 1,
-                generatedLine: lines < 2 ? 2 : lines
-            });
-        }
+        return {
+            name: this.names[segment.nameIndex ?? -1] ?? null,
+            line: segment.line,
+            column: segment.column,
+            source: this.sources[segment.sourceIndex],
+            sourceRoot: this.sourceRoot,
+            sourceIndex: segment.sourceIndex,
+            generatedLine: segment.generatedLine,
+            generatedColumn: segment.generatedColumn
+        };
     }
 
     /**
-     * Converts the source map object to a JSON string representation.
+     * Retrieves the position and original source content for a given position in the generated code.
      *
-     * This method performs the following steps:
-     * 1. Creates a plain object representation of the source map using the `getMapObject` method.
-     * 2. Converts the plain object to a JSON string using `JSON.stringify`.
-     *
-     * @returns A JSON string representation of the source map.
+     * @param line - Line number in the generated code.
+     * @param column - Column number in the generated code.
+     * @param bias - Bias used for position matching.
+     * @returns { PositionWithContentInterface | null } The position and its associated content, or `null` if not found.
      *
      * @example
-     * const sourceMapString = sourceMapService.toString();
-     * // sourceMapString contains the JSON string representation of the source map.
+     * ```ts
+     * const positionWithContent = sourceService.getPositionWithContent(3, 5);
+     * console.log(positionWithContent?.sourcesContent); // The source code content
+     * ```
+     */
+
+    getPositionWithContent(line: number, column: number, bias: Bias = Bias.BOUND): PositionWithContentInterface | null {
+        const position = this.getPosition(line, column, bias);
+        if (!position)
+            return null;
+
+        return {
+            ...position,
+            sourcesContent: this.sourcesContent[position.sourceIndex]
+        };
+    }
+
+    /**
+     * Retrieves the position and a code snippet from the original source based on the given
+     * generated code position, with additional lines of code around the matching line.
+     *
+     * @param line - Line number in the generated code.
+     * @param column - Column number in the generated code.
+     * @param bias - Bias used for position matching.
+     * @param options - (Optional) Extra options for the amount of surrounding lines to include.
+     * @returns { PositionWithCodeInterface | null } The position and code snippet.
+     *
+     * @example
+     * ```ts
+     * const positionWithCode = sourceService.getPositionWithCode(4, 8, Bias.BOUND, { linesBefore: 2, linesAfter: 2 });
+     * console.log(positionWithCode?.code); // The code snippet from the original source
+     * ```
+     */
+
+    getPositionWithCode(line: number, column: number, bias: Bias = Bias.BOUND, options?: SourceOptionsInterface): PositionWithCodeInterface | null {
+        const position = this.getPosition(line, column, bias);
+        if (!position || !this.sourcesContent[position.sourceIndex])
+            return null;
+
+        const settings = Object.assign({
+            linesAfter: 4,
+            linesBefore: 3
+        }, options);
+
+        const code = this.sourcesContent[position.sourceIndex].split('\n');
+        const endLine = Math.min( (position.line ?? 1) + settings.linesAfter, code.length);
+        const startLine = Math.max((position.line ?? 1) - settings.linesBefore, 0);
+        const relevantCode = code.slice(startLine, Math.min(endLine + 1, code.length)).join('\n');
+
+        return {
+            ...position,
+            code: relevantCode,
+            endLine: endLine,
+            startLine: startLine
+        };
+    }
+
+    /**
+     * Converts the current source map object to a JSON string.
+     *
+     * @returns A stringified version of the source map object.
+     *
+     * @example
+     * ```ts
+     * console.log(sourceService.toString()); // JSON string of the source map
+     * ```
      */
 
     toString(): string {
         return JSON.stringify(this.getMapObject());
-    }
-
-    /**
-     * Retrieves the position information in the original source code along with a snippet
-     * of the surrounding source code based on the provided mapping.
-     *
-     * This method takes a mapping object that represents a position in the generated code
-     * and locates the corresponding position in the original source code. It extracts a
-     * relevant code snippet surrounding the identified position, providing context for
-     * debugging or inspection purposes.
-     *
-     * @param map - A `MappingInterface` object representing the mapping from the generated
-     *              code to the original source code. If the mapping is null or invalid,
-     *              the method will return null.
-     * @param settings - An object containing configuration options for retrieving the
-     *                   surrounding code snippet, including:
-     *   - `linesAfter`: The number of lines to include after the specified line (default is 4).
-     *   - `linesBefore`: The number of lines to include before the specified line (default is 3).
-     *
-     * @returns An object containing detailed source information, including:
-     *   - `line`: The line number in the original source code.
-     *   - `column`: The column number in the original source code.
-     *   - `startLine`: The starting line number of the returned source code snippet.
-     *   - `endLine`: The ending line number of the returned source code snippet.
-     *   - `name`: The name of the function or variable at the matched position, if available.
-     *   - `source`: The file name of the original source.
-     *   - `sourceRoot`: The root directory of the original source file.
-     *   - `code`: A snippet of the original source code surrounding the specified line and column.
-     *
-     * @returns Null if no valid mapping is provided or if no matching source position is found.
-     *
-     * @example
-     * ```typescript
-     * const positionInfo = getPositionWithSource(mapping, { linesAfter: 4, linesBefore: 3 });
-     * if (positionInfo) {
-     *     console.log(positionInfo);
-     *     // {
-     *     //   code: 'function myFunction() {...}',
-     *     //   line: 7,
-     *     //   column: 15,
-     *     //   startLine: 5,
-     *     //   endLine: 9,
-     *     //   name: 'myFunction',
-     *     //   source: 'app.js',
-     *     //   sourceRoot: '/src'
-     *     // }
-     * }
-     * ```
-     */
-
-    private getPositionWithSource(map: MappingInterface | null, settings: Required<SourceOptionsInterface>): PositionSourceInterface | null  {
-        if (!map || isNaN(map.fileIndex)) {
-            return null;
-        }
-
-        const code = this.sourcesContent[map.fileIndex].split('\n');
-        const endLine = (map.sourceLine ?? 1) + settings.linesAfter;
-        const startLine = Math.max((map.sourceLine ?? 1) - settings.linesBefore, 0);
-        const relevantCode = code.slice(startLine, Math.min(endLine + 1, code.length)).join('\n');
-
-        return {
-            code: relevantCode,
-            line: map.sourceLine,
-            name:this.names[map.nameIndex ?? -1] ?? null,
-            column: map.sourceColumn,
-            endLine: endLine,
-            startLine: startLine,
-            source: this.sources[map.fileIndex],
-            sourceRoot: this.sourceRoot
-        };
     }
 
     /**
@@ -433,360 +365,22 @@ export class SourceService {
      * @throws Error If any required key is missing from the source map.
      *
      * @example
+     * ```ts
      * const sourceMap = {
      *     version: 3,
      *     file: 'example.js',
      *     names: ['src', 'maps', 'example', 'function', 'line', 'column'],
      *     sources: ['source1.js', 'source2.js'],
      *     mappings: 'AAAA,SAASA,CAAC,CAAC,CAAC;AAAA,CAAC,CAAC;AAAC,CAAC',
-     *     sourcesContent: ['console.log("Hello world");', 'console.log("Another file");']
      * };
-     *
-     * try {
-     *     validateSourceMap(sourceMap);
-     *     console.log('Source map is valid.');
-     * } catch (error) {
-     *     console.error('Invalid source map:', error.message);
-     * }
+     * sourceService['validateSource'](sourceMap); // Throws if invalid
+     * ```
      */
 
     private validateSourceMap(input: SourceMapInterface): void {
-        const requiredKeys: (keyof SourceMapInterface)[] = [ 'version', 'sources', 'sourcesContent', 'mappings', 'names' ];
+        const requiredKeys: (keyof SourceMapInterface)[] = [ 'sources', 'mappings', 'names' ];
         if (!requiredKeys.every(key => key in input)) {
             throw new Error('Missing required keys in SourceMap.');
         }
-    }
-
-    /**
-     * Decodes and processes the base64 VLQ-encoded mappings from a source map.
-     *
-     * This method interprets the encoded mappings from the `mappings` property of a source map. It adjusts
-     * the shift state for both generated and original positions in the source code, and processes each
-     * decoded mapping segment using the `decodedSegment` method.
-     *
-     * The decoding process involves:
-     * 1. Parsing the base64 VLQ-encoded mappings.
-     * 2. Adjusting the shift state based on the provided `thresholdSegment` or default values.
-     * 3. Handling each decoded mapping segment with the `decodedSegment` method.
-     *
-     * @param encodedMappings - A string representing the encoded mappings in base64 VLQ format. This string
-     *                          is typically found in the `mappings` property of a source map.
-     * @param thresholdSegment - Optional. An object containing offset information that adjusts the starting
-     *                           point for decoding. This can include offsets for line, column, or file index.
-     *                           If not provided, default values are used.
-     * @throws Error - Throws an error if the decoding process encounters an issue, such as an invalid
-     *                 encoding or unexpected format.
-     *
-     * @example
-     * const encodedMappings = 'AAAA,CAAC,CAAC,CAAC,CAAC;AAAA,CAAC,CAAC,CAAC,CAAC';
-     * const threshold = {
-     *     fileIndex: 0,
-     *     nameIndex: 0,
-     *     sourceLine: 1,
-     *     sourceColumn: 1,
-     *     generatedLine: 1,
-     *     generatedColumn: 1
-     * };
-     * try {
-     *     decodeMappings(encodedMappings, threshold);
-     * } catch (error) {
-     *     console.error('Failed to decode mappings:', error.message);
-     * }
-     */
-
-    private decodeMappings(encodedMappings: string, thresholdSegment?: ThresholdSegmentInterface): void {
-        // Note: Line and column numbers in source maps start at 1,
-        // unlike arrays which start at 0. Therefore, the initial shift for lines is set to 1.
-        const shift = Object.assign({
-            fileIndex: 0,
-            nameIndex: 0,
-            sourceLine: 1,
-            sourceColumn: 1,
-            generatedLine: 1,
-            generatedColumn: 1
-        }, thresholdSegment);
-
-        try {
-            for (const [ generatedLine, stringSegments ] of encodedMappings.split(';').entries()) {
-                if (!stringSegments) continue;
-                shift.generatedColumn = 1;
-                const segments = stringSegments.split(',');
-
-                for (const segment of segments) {
-                    if (segment.length < 4) continue;
-                    const decodedSegment = decodeVLQ(segment);
-
-                    this.decodedSegment(shift, decodedSegment, generatedLine + shift.generatedLine);
-                }
-            }
-        } catch (error) {
-            throw new Error(`Error decoding mappings: ${ (<Error>error).message }`);
-        }
-    }
-
-    /**
-     * Processes a decoded VLQ segment and updates the mapping information.
-     *
-     * This method adjusts the current mapping state based on the decoded VLQ segment and the current
-     * line in the generated code. It then updates the internal mappings list with the new information.
-     *
-     * The decoding process involves:
-     * 1. Extracting the mapping details from the `decodedSegment` array.
-     * 2. Updating the shift values for file index, name index, source line, source column, and generated column.
-     * 3. Adding the processed mapping to the internal `mappings` array.
-     *
-     * @param shift - The current state of mapping information. This object tracks the cumulative state
-     *                of file index, name index, source line, source column, and generated column.
-     * @param decodedSegment - An array representing the decoded VLQ segment, containing:
-     *   - `generatedColumn`: The column number in the generated code.
-     *   - `fileIndex`: The index in the sources array.
-     *   - `sourceLine`: The line number in the original source code.
-     *   - `sourceColumn`: The column number in the original source code.
-     *   - `nameIndex`: The index in the names array.
-     * @param generatedLine - The line index in the generated code where this segment applies.
-     *
-     * @example
-     * const shift = {
-     *     fileIndex: 0,
-     *     nameIndex: 0,
-     *     sourceLine: 1,
-     *     sourceColumn: 1,
-     *     generatedLine: 1,
-     *     generatedColumn: 1
-     * };
-     * const decodedSegment = [2, 1, 3, 4, 5];
-     * const generatedLine = 1;
-     * this.decodedSegment(shift, decodedSegment, generatedLine);
-     *
-     * @see ShiftSegmentInterface for details on the `shift` parameter.
-     * @see SourceMapInterface for details on the mapping properties.
-     */
-
-    private decodedSegment(shift: ShiftSegmentInterface, decodedSegment: Array<number>, generatedLine: number): void {
-        const [ generatedColumn, fileIndex, sourceLine, sourceColumn, nameIndex ] = decodedSegment;
-        shift.fileIndex += fileIndex;
-        shift.nameIndex += nameIndex ?? 0;
-        shift.sourceLine += sourceLine;
-        shift.sourceColumn += sourceColumn;
-        shift.generatedColumn += generatedColumn;
-
-        this.mappings.push({
-            nameIndex: (nameIndex !== undefined) ? shift.nameIndex : null,
-            fileIndex: shift.fileIndex,
-            sourceLine: shift.sourceLine,
-            sourceColumn: shift.sourceColumn,
-            generatedLine: generatedLine,
-            generatedColumn: shift.generatedColumn
-        });
-    }
-
-    /**
-     * Encodes an array of mappings into a VLQ-encoded string representation.
-     *
-     * This method converts an array of `MappingInterface` objects into a base64 VLQ-encoded string,
-     * which is used in source maps to represent the mapping between generated and original source code positions.
-     *
-     * The encoding process involves:
-     * 1. Initializing the shift state to track the current line and column in the generated code.
-     * 2. Iterating through the mappings to group them by line number and encode each segment.
-     * 3. Concatenating encoded segments with the appropriate separator characters (`,` and `;`).
-     *
-     * @param mappings - An array of `MappingInterface` objects representing the mappings to encode. Each mapping object contains:
-     *   - `nameIndex`: The index in the names array.
-     *   - `fileIndex`: The index in the sources array.
-     *   - `sourceLine`: The line number in the original source code.
-     *   - `sourceColumn`: The column number in the original source code.
-     *   - `generatedLine`: The line number in the generated code.
-     *   - `generatedColumn`: The column number in the generated code.
-     * @returns A VLQ-encoded string representing the mappings, with segments separated by commas and lines by semicolons.
-     *
-     * @example
-     * const mappings = [
-     *     { nameIndex: 0, fileIndex: 1, sourceLine: 2, sourceColumn: 3, generatedLine: 1, generatedColumn: 4 },
-     *     { nameIndex: 1, fileIndex: 1, sourceLine: 3, sourceColumn: 4, generatedLine: 2, generatedColumn: 5 }
-     * ];
-     * const encodedMappings = this.encodeMappings(mappings);
-     * console.log(encodedMappings); // Outputs the VLQ-encoded string
-     *
-     * @see MappingInterface for details on the mapping properties.
-     */
-
-    private encodeMappings(mappings: Array<MappingInterface>): string {
-        let resultMapping = '';
-        let segments: Array<string> = [];
-
-        const shift = {
-            fileIndex: 0,
-            nameIndex: 0,
-            sourceLine: 1,
-            sourceColumn: 1,
-            generatedLine: 1,
-            generatedColumn: 1
-        };
-
-        shift.generatedLine = mappings[0].generatedLine;
-        resultMapping += ';'.repeat(shift.generatedLine - 1);
-
-        for (const map of mappings) {
-            if (map.generatedLine !== shift.generatedLine) {
-                resultMapping += segments.join(',');
-                resultMapping += ';'.repeat(Math.max(1, map.generatedLine - shift.generatedLine));
-
-                segments = [];
-                shift.generatedLine = map.generatedLine;
-                shift.generatedColumn = 1;
-            }
-
-            this.encodeSegment(map, segments, shift);
-        }
-
-        return resultMapping + segments.join(',') + ';';
-    }
-
-    /**
-     * Encodes a single segment of the mappings into VLQ format.
-     *
-     * This method processes a `MappingInterface` object and updates the list of encoded segments. It calculates the differences
-     * between the current and previous mapping states, then encodes these differences using VLQ (Variable-Length Quantity) encoding.
-     * The encoded segment is added to the provided `segments` array.
-     *
-     * The encoding process involves:
-     * 1. Calculating the delta values for the file index, source line, source column, and generated column.
-     * 2. Updating the `shift` state to reflect the current mapping information.
-     * 3. Encoding the segment using VLQ and adding it to the `segments` array.
-     *
-     * @param map - The `MappingInterface` object representing a single mapping to encode. This object contains:
-     *   - `nameIndex`: The index in the names array.
-     *   - `fileIndex`: The index in the sources array.
-     *   - `sourceLine`: The line number in the original source code.
-     *   - `sourceColumn`: The column number in the original source code.
-     *   - `generatedColumn`: The column number in the generated code.
-     * @param segments - An array of encoded segments that will be updated with the new encoded segment.
-     * @param shift - The current state of the mapping information, including the latest file index, name index, source line,
-     *                source column, and generated column. This state is updated as new mappings are processed.
-     *
-     * @example
-     * const map: MappingInterface = { nameIndex: 0, fileIndex: 1, sourceLine: 2, sourceColumn: 3, generatedLine: 1, generatedColumn: 4 };
-     * const segments: Array<string> = [];
-     * const shift: ShiftSegmentInterface = { fileIndex: 0, nameIndex: 0, sourceLine: 1, sourceColumn: 1, generatedLine: 1, generatedColumn: 1 };
-     * this.encodeSegment(map, segments, shift);
-     * console.log(segments); // Outputs the encoded VLQ segment
-     *
-     * @see MappingInterface for details on the mapping properties.
-     * @see encodeArrayVLQ for the encoding function used.
-     */
-
-
-
-    private encodeSegment(map: MappingInterface, segments: Array<string>, shift: ShiftSegmentInterface): void {
-        const segment: Array<number> = [];
-        const sourceIndex = map.fileIndex;
-
-        segment[1] = 0;
-        segment[2] = map.sourceLine - shift.sourceLine;
-        segment[3] = map.sourceColumn - shift.sourceColumn;
-        segment[0] = map.generatedColumn - shift.generatedColumn;
-
-        if (sourceIndex !== shift.fileIndex) {
-            segment[1] = sourceIndex - shift.fileIndex;
-            shift.fileIndex = sourceIndex;
-        }
-
-        if (map.nameIndex) {
-            const nameIndex = map.nameIndex;
-            segment[4] = nameIndex - shift.nameIndex;
-            shift.nameIndex = nameIndex;
-        }
-
-        shift.sourceLine = map.sourceLine;
-        shift.sourceColumn = map.sourceColumn;
-        shift.generatedColumn = map.generatedColumn;
-        segments.push(encodeArrayVLQ(segment));
-    }
-
-    /**
-     * Determines whether a mapping should be skipped based on the specified file index.
-     *
-     * This function checks if the given mapping's file index matches the provided file index.
-     * If the file index is not -1 (which indicates that filtering is desired),
-     * the function returns true if the mapping's file index does not match the specified file index.
-     *
-     * @param mapping - The mapping object to evaluate.
-     * @param fileIndex - The file index to compare against the mapping's file index.
-     *                   A value of -1 indicates that no filtering should occur.
-     *
-     * @returns True if the mapping should be skipped, otherwise false.
-     */
-
-    private shouldSkipMapping(mapping: MappingInterface, fileIndex: number): boolean {
-        return fileIndex !== -1 && mapping.fileIndex !== fileIndex;
-    }
-
-    /**
-     * Retrieves the closest mapping from the mappings array based on the specified line and column.
-     *
-     * This function performs a binary search to find the mapping that corresponds to the given line and column
-     * parameters. It takes into account the specified bias for the column in case of a tie in the line number,
-     * and can also filter results by a specific file index if provided.
-     *
-     * @param line - The target line number to search for in the mappings.
-     * @param column - The target column number to search for in the mappings.
-     * @param bias - The bias to use when the line matches; it can be:
-     *               - Bias.BOUND (default): No preference for column matching.
-     *               - Bias.LOWER_BOUND: Prefer the closest mapping with a lower column value.
-     *               - Bias.UPPER_BOUND: Prefer the closest mapping with a higher column value.
-     * @param fileIndex - The index of the file to filter the mappings by. If set to -1, no filtering is applied.
-     * @param lineKey - The key to access the line number in the mapping object.
-     *                  Can be either 'generatedLine' or 'sourceLine'.
-     * @param columnKey - The key to access the column number in the mapping object.
-     *                    Can be either 'generatedColumn' or 'sourceColumn'.
-     *
-     * @returns The closest matching MappingInterface object, or null if no matching mapping is found.
-     */
-
-    private retrieveMapping(
-        line: number,
-        column: number,
-        bias: Bias = Bias.BOUND,
-        fileIndex: number = -1,
-        lineKey: 'generatedLine' | 'sourceLine' = 'generatedLine',
-        columnKey: 'generatedColumn' | 'sourceColumn' = 'generatedColumn'
-    ): MappingInterface | null {
-        let startIndex = 0;
-        let endIndex = this.mappings.length - 1;
-        let closestMapping: MappingInterface | null = null;
-
-        while (startIndex <= endIndex) {
-            const middleIndex = Math.floor((startIndex + endIndex) / 2);
-            const currentMapping = this.mappings[middleIndex];
-
-            if (this.shouldSkipMapping(currentMapping, fileIndex)) {
-                startIndex = middleIndex + 1;
-                continue;
-            }
-
-            const currentLine = currentMapping[lineKey];
-            const currentColumn = currentMapping[columnKey];
-
-            if (currentLine < line) {
-                startIndex = middleIndex + 1;
-            } else if (currentLine > line) {
-                endIndex = middleIndex - 1;
-            } else {
-                // Handle column bias when line matches
-                if (currentColumn < column) {
-                    closestMapping = bias === Bias.LOWER_BOUND ? currentMapping : closestMapping;
-                    startIndex = middleIndex + 1;
-                } else if (currentColumn > column) {
-                    closestMapping = bias === Bias.UPPER_BOUND ? currentMapping : closestMapping;
-                    endIndex = middleIndex - 1;
-                } else {
-                    return currentMapping; // Exact match found
-                }
-            }
-        }
-
-        // Return the closest mapping if it matches the specified line
-        return closestMapping && closestMapping[lineKey] === line ? closestMapping : null;
     }
 }
