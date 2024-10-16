@@ -54,9 +54,9 @@ describe('highlightCode', () => {
     test('should use default scheme when no schema is provided', () => {
         const code = 'const x: number = 42;';
         const highlightedCode = highlightCode(code, { keywordColor: Colors.lightCoral });
-        expect(highlightedCode).toContain(Colors.burntOrange); // variableColor
-        expect(highlightedCode).toContain(Colors.lightGoldenrodYellow); // typeColor
-        expect(highlightedCode).toContain(Colors.lightCoral); // keywordColor
+        expect(highlightedCode).toContain(Colors.burntOrange);
+        expect(highlightedCode).toContain(Colors.lightGoldenrodYellow);
+        expect(highlightedCode).toContain(Colors.lightCoral);
         expect(highlightedCode).toContain(Colors.reset);
     });
 
@@ -85,8 +85,8 @@ describe('Process Identifier', () => {
     const mockAddSegment = jest.fn();
 
     beforeEach(() => {
-        highlighter = new CodeHighlighter(<any>{}, '', schema); // Initialize your highlighter class
-        (<any> highlighter).addSegment = mockAddSegment; // Mock the addSegment method
+        highlighter = new CodeHighlighter(<any> {}, '', schema);
+        (<any> highlighter).addSegment = mockAddSegment;
     });
 
     const testCases = [
@@ -118,21 +118,17 @@ describe('Process Identifier', () => {
     ];
 
     testCases.forEach(({ kind, color }) => {
-        test(`should add segment for ${ts.SyntaxKind[kind]} nodes`, () => {
-            // Create a mock node for each kind
+        test(`should add segment for ${ ts.SyntaxKind[kind] } nodes`, () => {
             const mockNode = {
                 getStart: jest.fn().mockReturnValue(0),
                 getEnd: jest.fn().mockReturnValue(10),
                 kind: ts.SyntaxKind.Identifier,
                 parent: {
-                    kind: kind // Assuming parent kind is the same for simplicity
+                    kind: kind
                 }
             };
 
-            // Call the method that processes the node
             (<any> highlighter).processNode(mockNode);
-
-            // Verify that addSegment is called with the correct parameters
             expect(mockAddSegment).toHaveBeenCalledWith(0, 10, color);
         });
     });
@@ -151,10 +147,7 @@ describe('Process Identifier', () => {
             }
         };
 
-        // Call the method that processes the node
         (<any> highlighter).processNode(mockNode);
-
-        // Verify that addSegment is called with the correct parameters
         expect(mockAddSegment).toHaveBeenCalledWith(0, 10, schema.variableColor);
     });
 
@@ -172,10 +165,7 @@ describe('Process Identifier', () => {
             }
         };
 
-        // Call the method that processes the node
         (<any> highlighter).processNode(mockNode);
-
-        // Verify that addSegment is called with the correct parameters
         expect(mockAddSegment).toHaveBeenCalledWith(0, 10, schema.propertyAccessExpressionColor);
     });
 });
@@ -185,8 +175,8 @@ describe('Process Node', () => {
     const mockAddSegment = jest.fn();
 
     beforeEach(() => {
-        highlighter = new CodeHighlighter(<any>{}, '', schema); // Initialize your highlighter class
-        (<any> highlighter).addSegment = mockAddSegment; // Mock the addSegment method
+        highlighter = new CodeHighlighter(<any> {}, '', schema);
+        (<any> highlighter).addSegment = mockAddSegment;
     });
 
     const testCases = [
@@ -195,8 +185,8 @@ describe('Process Node', () => {
     ];
 
     testCases.forEach(({ kind, color, end }) => {
-        test(`should add segment for ${ts.SyntaxKind[kind]} nodes`, () => {
-            // Create a mock node for each kind
+        test(`should add segment for ${ ts.SyntaxKind[kind] } nodes`, () => {
+
             const mockNode = {
                 getStart: jest.fn().mockReturnValue(0),
                 getEnd: jest.fn().mockReturnValue(10),
@@ -206,10 +196,7 @@ describe('Process Node', () => {
                 }
             };
 
-            // Call the method that processes the node
             (<any> highlighter).processNode(mockNode);
-
-            // Verify that addSegment is called with the correct parameters
             expect(mockAddSegment).toHaveBeenCalledWith(0, end, color);
         });
     });
@@ -254,22 +241,22 @@ describe('formatErrorCode', () => {
     test('should throw an error for invalid line number', () => {
         const sourcePosition = {
             code: 'line1\nline2\nline3',
-            line: 4,  // Out of range
+            line: 4,
             column: 2,
             startLine: 5
         };
 
-        expect(() => formatErrorCode(<any>sourcePosition)).toThrow('Invalid line or column number.');
+        expect(() => formatErrorCode(<any> sourcePosition)).toThrow('Invalid line or column number.');
     });
 
     test('should throw an error for invalid column number', () => {
         const sourcePosition = {
             code: 'line1\nline2\nline3',
             line: 2,
-            column: -1,  // Invalid column number
+            column: -1,
             startLine: 1
         };
 
-        expect(() => formatErrorCode(<any>sourcePosition)).toThrow('Invalid line or column number.');
+        expect(() => formatErrorCode(<any> sourcePosition)).toThrow('Invalid line or column number.');
     });
 });

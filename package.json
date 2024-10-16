@@ -1,9 +1,11 @@
 {
     "name": "@remotex-labs/xmap",
-    "main": "dist/index.js",
-    "types": "dist/index.d.ts",
+    "main": "dist/cjs/index.js",
+    "type": "module",
+    "types": "./dist/cjs/index.d.ts",
+    "module": "./dist/esm/index.js",
     "author": "Garefild",
-    "version": "1.1.0",
+    "version": "v1.0.0-local",
     "license": "Mozilla Public License Version 2.0",
     "description": "A library with a sourcemap parser and TypeScript code formatter for the CLI",
     "homepage": "https://github.com/remotex-lab/xMap",
@@ -32,6 +34,19 @@
     "engines": {
         "node": ">=18"
     },
+    "exports": {
+        "./package.json": "./package.json",
+        ".": {
+            "import": {
+                "types": "./dist/esm/index.d.ts",
+                "default": "./dist/esm/index.js"
+            },
+            "require": {
+                "types": "./dist/cjs/index.d.ts",
+                "default": "./dist/cjs/index.js"
+            }
+        }
+    },
     "files": [
         "dist",
         "LICENSE",
@@ -40,7 +55,7 @@
     "scripts": {
         "dev": "xBuild -w",
         "test": "jest",
-        "build": "xBuild",
+        "build": "xBuild && xbuild -c xbuild.cjs.ts",
         "test:coverage": "jest --coverage",
         "lint": "xbuild --tc && eslint . -c ./eslint.config.mjs",
         "ci:test": "jest",
@@ -49,15 +64,15 @@
     },
     "devDependencies": {
         "jest": "^29.7.0",
-        "eslint": "^9.11.1",
-        "typescript-eslint": "^8.7.0",
-        "eslint-plugin-jsdoc": "^50.3.0",
+        "eslint": "^9.12.0",
+        "typescript-eslint": "^8.9.0",
+        "eslint-plugin-jsdoc": "^50.4.1",
         "@swc/jest": "^0.2.36",
         "@types/jest": "^29.5.13",
-        "@types/node": "^22.7.4",
+        "@types/node": "^22.7.5",
         "@remotex-labs/xbuild": "^1.2.0"
     },
     "dependencies": {
-        "typescript": "^5.6.2"
+        "typescript": "^5.6.3"
     }
 }

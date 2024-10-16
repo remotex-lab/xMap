@@ -3,7 +3,7 @@
         "strict": true,
         "target": "ESNext",
         "module": "ESNext",
-        "baseUrl": ".",
+        "baseUrl": "./src",
         "outDir": "dist",
         "rootDir": "./src",
         "declaration": true,
@@ -25,22 +25,24 @@
         ],
         "paths": {
             "@services/*": [
-                "src/services/*"
+                "./services/*"
             ],
             "@providers/*": [
-                "src/core/providers/*"
+                "./providers/*"
             ],
             "@components/*": [
-                "src/components/*"
+                "./components/*"
             ]
         }
     },
     "include": [
-        "src/**/*"
+        "**/*"
     ],
     "exclude": [
         "dist",
         "node_modules",
-        "**/*.spec.ts"
+        "**/*.spec.ts",
+        "xbuild.cjs.ts",
+        "xbuild.config.ts"
     ]
 }
