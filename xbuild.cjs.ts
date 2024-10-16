@@ -18,7 +18,7 @@ const config: xBuildConfig = {
     ...esmConfig,
     esbuild: {
         ...esmConfig.esbuild,
-        format: 'esm',
+        format: 'cjs',
         outdir: 'dist/cjs'
     }
 };
