@@ -2,7 +2,7 @@
  * Import will remove at compile time
  */
 
-import type { PositionSourceInterface } from '@services/interfaces/source.interface';
+import type { PositionWithCodeInterface } from '@services/interfaces/source.interface';
 import type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter.interface';
 
 /**
@@ -84,7 +84,7 @@ export function formatCode(code: string, options: FormatCodeInterface = {}): str
  * ```
  */
 
-export function formatErrorCode(sourcePosition: PositionSourceInterface, ansiOption?: AnsiOptionInterface): string {
+export function formatErrorCode(sourcePosition: PositionWithCodeInterface, ansiOption?: AnsiOptionInterface): string {
     const { code, line: errorLine, column: errorColumn, startLine } = sourcePosition;
 
     // Validate line and column numbers
