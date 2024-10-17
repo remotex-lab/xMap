@@ -2,18 +2,13 @@
  * Import will remove at compile time
  */
 
-import {
-    Bias,
-    type MapType,
-    type FrameType,
-    type SegmentInterface,
-    type SegmentOffsetInterface
-} from './interfaces/mapping.interface';
+import type { MapType, FrameType, SegmentInterface, SegmentOffsetInterface } from './interfaces/mapping.interface';
 
 /**
  * Imports
  */
 
+import { Bias } from './interfaces/mapping.interface';
 import { decodeVLQ, encodeArrayVLQ } from '@components/base64.component';
 
 /**
@@ -263,7 +258,8 @@ export class MappingProvider {
      */
 
     private validateMappingString(encodedSourceMap: string): boolean {
-        return /^(;*([A-Za-z0-9+/]{1,7}(([,]|[;]+)[A-Za-z0-9+/]{1,7})*));*$/.test(encodedSourceMap);
+        // /^(;+)?([a-z0-9+/]{1,10}(,|;+)?)+$/
+        return /^[a-zA-Z0-9+/,;]+$/.test(encodedSourceMap);
     }
 
     /**
