@@ -5,7 +5,7 @@
         "module": "ESNext",
         "baseUrl": "./src",
         "outDir": "dist",
-        "rootDir": "./src",
+        "rootDir": ".",
         "declaration": true,
         "skipLibCheck": true,
         "importHelpers": true,
@@ -36,7 +36,7 @@
         }
     },
     "include": [
-        "**/*"
+        "src/**/*"
     ],
     "exclude": [
         "dist",
