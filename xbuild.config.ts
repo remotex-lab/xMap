@@ -19,25 +19,16 @@ const config: Array<xBuildConfig> = [
     {
         declaration: true,
         esbuild: {
-            bundle: false,
+            bundle: true,
             minify: true,
             format: 'esm',
-            outdir: 'dist',
+            outdir: 'dist/esm',
             target: [ `node${ version.slice(1) }` ],
             platform: 'node',
             packages: 'external',
             sourcemap: true,
-            sourceRoot: `https://github.com/remotex-lab/xmap/tree/${ pkg.version }/`,
+            sourceRoot: `https://github.com/remotex-lab/xmap/tree/v${ pkg.version }/`,
             entryPoints: [ 'src/index.ts' ]
-        }
-    },
-    {
-        declaration: false,
-        noTypeChecker: false,
-        esbuild: {
-            bundle: true,
-            format: 'esm',
-            outdir: 'dist/esm'
         }
     },
     {
