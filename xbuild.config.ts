@@ -33,7 +33,7 @@ const config: Array<xBuildConfig> = [
     },
     {
         declaration: false,
-        noTypeChecker: false,
+        noTypeChecker: true,
         esbuild: {
             bundle: true,
             format: 'cjs',
