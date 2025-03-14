@@ -1,42 +1,35 @@
 /**
- * Represents an entry in the stack trace.
+ * Represents a parsed stack frame from an error stack trace
+ *
+ * @see ParsedStackTrace
+ * @since 2.1.0
  */
 
-export interface StackInterface {
-    /**
-     * The function or method where the error occurred.
-     */
-
-    at: string;
-
-    /**
-     * The file path where the error occurred.
-     */
-
-    file: string;
-
-    /**
-     * The line number where the error occurred.
-     */
-
-    line: number;
-
-    /**
-     * The column number where the error occurred.
-     */
-
-    column: number;
+export interface StackFrame {
+    source: string;              // Original stack line
+    fileName: string | null;     // Source file path/name
+    lineNumber: number | null;   // Line number
+    columnNumber: number | null; // Column number
+    functionName: string | null; // Function name (if available)
+    isEval: boolean;             // Whether this frame is from evaluated code
+    evalOrigin?: {               // If isEval is true, information about the eval context
+        fileName: string | null;
+        lineNumber: number | null;
+        columnNumber: number | null;
+        functionName: string | null;
+    };
 }
 
 /**
- * Represents a detailed entry in the stack trace, which may include an executor stack entry.
+ * Represents a fully parsed error stack trace with structured information
+ *
+ * @see StackFrame
+ * @since 2.1.0
  */
 
-export interface StackEntryInterface extends StackInterface {
-    /**
-     * The executor information if the error occurred within an eval function.
-     * This will be `null` if the error did not occur within an eval function.
-     */
-
-    executor?: StackInterface | null;
+export interface ParsedStackTrace {
+    name: string;               // Error name/type
+    message: string;            // Error message
+    stack: StackFrame[];        // Parsed frames
+    rawStack: string;           // Original stack trace string
 }
