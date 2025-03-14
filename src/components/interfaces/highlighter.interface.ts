@@ -1,7 +1,37 @@
 /**
- * HighlightSchemeInterface defines the structure for a color style schema
- * used in semantic highlighting.
- * This interface ensures that the highlighting styles are consistent and easily configurable.
+ * Defines the color scheme for syntax highlighting different code elements.
+ *
+ * @interface HighlightSchemeInterface
+ *
+ * @property enumColor - Color code for enum declarations and references
+ * @property typeColor - Color code for type annotations and primitive types
+ * @property classColor - Color code for class declarations and references
+ * @property stringColor - Color code for string literals and template strings
+ * @property keywordColor - Color code for language keywords
+ * @property commentColor - Color code for comments (single-line and multi-line)
+ * @property functionColor - Color code for function declarations and calls
+ * @property variableColor - Color code for variable declarations and references
+ * @property interfaceColor - Color code for interface declarations and references
+ * @property parameterColor - Color code for function and method parameters
+ * @property getAccessorColor - Color code for getter accessor methods
+ * @property numericLiteralColor - Color code for numeric literals
+ * @property methodSignatureColor - Color code for method signatures in interfaces
+ * @property regularExpressionColor - Color code for regular expression literals
+ * @property propertyAssignmentColor - Color code for property assignments in object literals
+ * @property propertyAccessExpressionColor - Color code for property access expressions
+ * @property expressionWithTypeArgumentsColor - Color code for type arguments in expressions
+ *
+ * @example
+ * ```ts
+ * const darkTheme: HighlightSchemeInterface = {
+ *   enumColor: Colors.cyan,
+ *   typeColor: Colors.blue,
+ *   classColor: Colors.yellow,
+ *   // ...other color definitions
+ * };
+ * ```
+ *
+ * @since 1.0.0
  */
 
 export interface HighlightSchemeInterface {
@@ -25,22 +55,38 @@ export interface HighlightSchemeInterface {
 }
 
 /**
- * Represents a segment of a code string that needs to be highlighted.
+ * Represents a segment of source code to be highlighted with specific styling.
  *
- * @interface
+ * @interface HighlightNodeSegmentInterface
  *
- * @property start - The starting index of the segment in the code string.
- * @property end - The ending index of the segment in the code string.
- * @property color - The color code to apply to the segment.
- * @property reset - The color reset code to apply after the segment.
+ * @property start - The starting character position of the segment in the source text
+ * @property end - The ending character position of the segment in the source text
+ * @property color - The color or style code to apply to this segment
+ * @property reset - The reset code that returns formatting to normal after this segment
+ *
+ * @remarks
+ * Segments are the fundamental units of the highlighting system.
+ * Each segment represents a portion of text that should receive specific styling.
+ * When the source code is processed for display,
+ * these segments are used to insert the appropriate color/style codes at the correct positions.
+ *
+ * The highlighter maintains a collection of these segments and applies them
+ * in position order to create the complete highlighted output.
  *
  * @example
- * const segment: HighlightNodeSegment = {
+ * ```ts
+ * const keywordSegment: HighlightNodeSegmentInterface = {
  *   start: 0,
- *   end: 10,
- *   color: '\x1b[31m', // Red
- *   reset: '\x1b[0m' // Reset
+ *   end: 6,
+ *   color: '\x1b[34m', // Blue for the keyword "import"
+ *   reset: '\x1b[0m'   // Reset to default
  * };
+ * ```
+ *
+ * @see HighlightSchemeInterface
+ * @see addSegment
+ *
+ * @since 1.0.0
  */
 
 export interface HighlightNodeSegmentInterface {

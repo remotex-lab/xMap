@@ -12,43 +12,51 @@ import { Bias } from './interfaces/mapping.interface';
 import { decodeVLQ, encodeArrayVLQ } from '@components/base64.component';
 
 /**
- * The `MappingProvider` class provides methods to encode and decode mappings
- * from a source map or mapping string to an internal structured representation.
+ * Provides functionality for encoding and decoding source map mappings.
+ *
+ * The MappingProvider class handles the conversion between various mapping representations:
+ * - String format (VLQ-encoded mappings)
+ * - Structured array format (MapType)
+ * - Internal structured representation
+ *
+ * It also provides methods to query and retrieve source map segments based on
+ * generated or original source positions.
+ *
+ * @example
+ * ```ts
+ * // Create from VLQ-encoded mapping string
+ * const provider = new MappingProvider(mappingString);
+ *
+ * // Get a segment by generated position
+ * const segment = provider.getSegment(10, 15);
+ *
+ * // Convert back to mapping string
+ * const encoded = provider.encode();
+ * ```
+ *
+ * @since 1.0.0
  */
 
 export class MappingProvider {
-    /**
-     * The internal mapping representation, where each index represents a frame of segments.
-     */
 
     private mapping: MapType = [];
 
     /**
-     * Constructor to initialize the `MappingProvider` with a mapping.
-     * Can be initialized with either a mapping string or a structured mapping array.
+     * Creates a new MappingProvider instance.
      *
-     * @param mapping - The mapping data, either as a string or structured array.
-     * @param namesOffset - Optional offset for the names index.
-     * @param sourceOffset - Optional offset for the sources index.
+     * @param mapping - Source map mapping data in one of three formats:
+     *                 - VLQ-encoded string
+     *                 - Structured array (MapType)
+     *                 - Another MappingProvider instance (copy constructor)
+     * @param namesOffset - Optional offset to apply to name indices (default: 0)
+     * @param sourceOffset - Optional offset to apply to source indices (default: 0)
      *
-     * @example
-     * ```ts
-     * const provider = new MappingProvider(";;;AAiBO,SAAS,OAAO;AACnB,UAAQ,IAAI,MAAM;AACtB;;;ACjBA,QAAQ,IAAI,GAAG;AACf,KAAK;", 0, 0);
-     * const provider2 = new MappingProvider([
-     *   null,
-     *   [
-     *     {
-     *       line: 1,
-     *       column: 1,
-     *       nameIndex: null,
-     *       sourceIndex: 0,
-     *       generatedLine: 2,
-     *       generatedColumn: 1
-     *     }
-     *   ],
-     *   null
-     * ], 0, 0);
-     * ```
+     * @remarks
+     * The constructor automatically detects the mapping format and decodes it accordingly.
+     * When providing offsets, these values will be added to the corresponding indices
+     * in the decoded mapping data, which is useful when concatenating multiple source maps.
+     *
+     * @since 1.0.0
      */
 
     constructor(mapping: string, namesOffset?: number, sourceOffset?: number);
@@ -64,14 +72,18 @@ export class MappingProvider {
     }
 
     /**
-     * Encodes the internal mapping array back into a mapping string.
+     * Encodes the internal mapping representation to a VLQ-encoded mapping string.
      *
-     * @returns {string} - The encoded mapping string.
-     * @example
-     * ```ts
-     * const encoded = provider.encode();
-     * console.log(encoded); // Outputs encoded mapping string
-     * ```
+     * @returns VLQ-encoded mapping string compatible with the source map format specification
+     *
+     * @remarks
+     * This method converts the internal structured mapping representation into a compact
+     * string format using Variable Length Quantity (VLQ) encoding.
+     * The resulting string follows the source map v3 format for the 'mappings' field.
+     *
+     * @see https://sourcemaps.info/spec.html
+     *
+     * @since 1.0.0
      */
 
     encode(): string {
@@ -79,29 +91,23 @@ export class MappingProvider {
     }
 
     /**
-     * Decodes a mapping from either a string or structured array into the internal mapping.
+     * Decodes mapping data into the internal representation.
      *
-     * @param mapping - The mapping data to decode.
-     * @param namesOffset - Offset for the names index.
-     * @param sourcesOffset - Offset for the sources index.
-     * @example
-     * ```ts
-     * provider.decode(";;;AAiBO,SAAS,OAAO;AACnB,UAAQ,IAAI,MAAM;AACtB;;;ACjBA,QAAQ,IAAI,GAAG;AACf,KAAK;", 0, 0);
-     * provider.decode([
-     *   null,
-     *   [
-     *     {
-     *       line: 1,
-     *       column: 1,
-     *       nameIndex: null,
-     *       sourceIndex: 0,
-     *       generatedLine: 2,
-     *       generatedColumn: 1
-     *     }
-     *   ],
-     *   null
-     * ], 0, 0);
-     * ```
+     * @param mapping - Mapping data to decode in one of three formats:
+     *                 - VLQ-encoded string
+     *                 - Structured array (MapType)
+     *                 - Another MappingProvider instance
+     * @param namesOffset - Optional offset for name indices (default: 0)
+     * @param sourcesOffset - Optional offset for source indices (default: 0)
+     *
+     * @remarks
+     * This method replaces the current internal mapping data with the newly decoded mapping.
+     * The format of the input mapping is automatically detected and processed accordingly.
+     *
+     * @see MapType
+     * @see MappingProvider
+     *
+     * @since 1.0.0
      */
 
     decode(mapping: MappingProvider| MapType | string, namesOffset = 0, sourcesOffset = 0): void {
@@ -114,39 +120,21 @@ export class MappingProvider {
     }
 
     /**
-     * Retrieves a segment based on the provided generated line and column,
-     * applying the specified bias when the exact match is not found.
+     * Retrieves a segment based on a position in the generated code.
      *
-     * This method performs a binary search on the segments of the specified
-     * generated line to efficiently locate the segment corresponding to
-     * the provided generated column. If an exact match is not found,
-     * the method returns the closest segment based on the specified bias:
-     * - `Bias.BOUND`: No preference for column matching (returns the closest segment).
-     * - `Bias.LOWER_BOUND`: Prefers the closest mapping with a lower column value.
-     * - `Bias.UPPER_BOUND`: Prefers the closest mapping with a higher column value.
+     * @param generatedLine - Line number in generated code (1-based)
+     * @param generatedColumn - Column number in generated code (0-based)
+     * @param bias - Controls matching behavior when exact position not found:
+     *              - BOUND: No preference (default)
+     *              - LOWER_BOUND: Prefer segment with lower column
+     *              - UPPER_BOUND: Prefer segment with higher column
+     * @returns Matching segment or null if not found
      *
-     * @param generatedLine - The line number of the generated code (1-based index).
-     * @param generatedColumn - The column number of the generated code (0-based index).
-     * @param bias - The bias to use when the line matches, can be one of:
-     *   - `Bias.BOUND` (default): No preference for column matching.
-     *   - `Bias.LOWER_BOUND`: Prefer the closest mapping with a lower column value.
-     *   - `Bias.UPPER_BOUND`: Prefer the closest mapping with a higher column value.
-     * @returns The matching segment if found;
-     * returns null if no segments exist for the specified generated line
-     * or if the generated line is out of bounds.
+     * @remarks
+     * Uses binary search to efficiently locate matching segments.
+     * When no exact match is found, the bias parameter determines which nearby segment to return.
      *
-     * @throws { Error } - Throws an error if the generated line is invalid
-     * (out of bounds).
-     *
-     * @example
-     * ```ts
-     * const segment = sourceMap.getSegment(5, 10, Bias.UPPER_BOUND);
-     * if (segment) {
-     *     console.log(`Found segment: line ${segment.line}, column ${segment.column}`);
-     * } else {
-     *     console.log('No matching segment found.');
-     * }
-     * ```
+     * @since 1.0.0
      */
 
     getSegment(generatedLine: number, generatedColumn: number, bias: Bias = Bias.BOUND): SegmentInterface | null {
@@ -176,28 +164,26 @@ export class MappingProvider {
     }
 
     /**
-     * Retrieves the original segment based on the provided line, column, and source index.
+     * Retrieves a segment based on a position in the original source code.
      *
-     * This method searches for the original segment that corresponds to the specified
-     * line, column, and source index. It uses binary search to find the closest segment
-     * based on the provided bias.
+     * @param line - Line number in original source (1-based)
+     * @param column - Column number in original source (0-based)
+     * @param sourceIndex - Index of source file in the sources array
+     * @param bias - Controls matching behavior when exact position not found:
+     *              - BOUND: No preference (default)
+     *              - LOWER_BOUND: Prefer segment with lower column
+     *              - UPPER_BOUND: Prefer segment with higher column
+     * @returns Matching segment or null if not found
      *
-     * @param line - The line number of the original code (1-based index).
-     * @param column - The column number of the original code (0-based index).
-     * @param sourceIndex - The index of the source file in the source map.
-     * @param bias - The bias to apply when multiple segments match; defaults to `Bias.BOUND`.
-     * @returns {SegmentInterface | null} - The matching original segment if found;
-     * returns null if no segments exist for the specified line and source index.
+     * @remarks
+     * Searches across all mapping segments to find those matching the specified original source position.
+     * When multiple matches are possible, the bias
+     * parameter determines which segment to return.
      *
-     * @example
-     * ```ts
-     * const originalSegment = sourceMap.getOriginalSegment(3, 5, 0, Bias.LOWER_BOUND);
-     * if (originalSegment) {
-     *     console.log(`Found original segment: line ${originalSegment.line}, column ${originalSegment.column}`);
-     * } else {
-     *     console.log('No matching original segment found.');
-     * }
-     * ```
+     * This operation is more expensive than getSegment as it must potentially
+     * scan the entire mapping structure.
+     *
+     * @since 1.0.0
      */
 
     getOriginalSegment(line: number, column: number, sourceIndex: number, bias: Bias = Bias.BOUND): SegmentInterface | null {
@@ -232,11 +218,18 @@ export class MappingProvider {
     }
 
     /**
-     * Initializes the segment offsets used to track the current decoding position.
+     * Initializes a new segment offset object with default values.
      *
-     * @param namesOffset - The offset for the names index.
-     * @param sourceIndex - The offset for the source index.
-     * @returns { SegmentOffsetInterface } - The initialized segment offset.
+     * @param namesOffset - Initial name index offset value (default: 0)
+     * @param sourceIndex - Initial source index offset value (default: 0)
+     * @returns A new segment offset object with initialized position tracking values
+     *
+     * @remarks
+     * This method creates an object that tracks position data during mapping operations.
+     * All position values (line, column, generatedLine, generatedColumn) are initialized to 0,
+     * while the nameIndex and sourceIndex can be initialized with custom offsets.
+     *
+     * @since 1.0.0
      */
 
     private initPositionOffsets(namesOffset: number = 0, sourceIndex: number = 0): SegmentOffsetInterface {
@@ -253,8 +246,18 @@ export class MappingProvider {
     /**
      * Validates the format of an encoded mapping string.
      *
-     * @param encodedSourceMap - The encoded source map string to validate.
-     * @returns Returns `true` if the format is valid, otherwise `false`.
+     * @param encodedSourceMap - The encoded source map string to validate
+     * @returns `true` if the string contains only valid VLQ mapping characters, otherwise `false`
+     *
+     * @remarks
+     * Checks if the string contains only characters valid in source map mappings:
+     * - Base64 characters (a-z, A-Z, 0-9, +, /)
+     * - Separators (commas for segments, semicolons for lines)
+     *
+     * This is a basic format validation and doesn't verify the semantic correctness
+     * of the VLQ encoding itself.
+     *
+     * @since 1.0.0
      */
 
     private validateMappingString(encodedSourceMap: string): boolean {
@@ -263,24 +266,26 @@ export class MappingProvider {
     }
 
     /**
-     * Validates the properties of a segment to ensure they conform to expected types.
+     * Validates that a segment's properties conform to expected types.
      *
-     * This method checks that the segment's properties are finite numbers and that
-     * the nameIndex, if provided, is either a finite number or null.
-     * An error is thrown if any of the properties do not meet the specified criteria.
+     * @param segment - The segment object to validate
      *
-     * @param segment - The segment object to validate, which must conform to the
-     *                  SegmentInterface structure, including:
-     *                  - line: number (finite)
-     *                  - column: number (finite)
-     *                  - nameIndex: number | null (if not null, must be finite)
-     *                  - sourceIndex: number (finite)
-     *                  - generatedLine: number (finite)
-     *                  - generatedColumn: number (finite)
+     * @remarks
+     * Performs the following validations on the segment properties:
+     * - line: Must be a finite number
+     * - column: Must be a finite number
+     * - nameIndex: Must be either null or a finite number
+     * - sourceIndex: Must be a finite number
+     * - generatedLine: Must be a finite number
+     * - generatedColumn: Must be a finite number
      *
-     * @throws {Error} - Throws an error if any property of the segment is invalid.
-     *                   The error message will specify which property is invalid
-     *                   and the value that was received.
+     * This validation ensures that segments can be safely used in mapping operations
+     * and prevents potential issues with non-numeric or infinite values.
+     *
+     * @throws Error - When any property of the segment is invalid, with a message
+     *                 indicating which property failed validation and its value
+     *
+     * @since 1.0.0
      */
 
     private validateSegment(segment: SegmentInterface): void {
@@ -305,11 +310,29 @@ export class MappingProvider {
     }
 
     /**
-     * Encodes a segment into a VLQ-encoded string based on the segment offsets.
+     * Encodes a segment into a VLQ-encoded string based on relative offsets.
      *
-     * @param segmentOffset - The current segment offset.
-     * @param segmentObject - The segment to encode.
-     * @returns The encoded segment string.
+     * @param segmentOffset - The current segment offset tracking state
+     * @param segmentObject - The segment to encode
+     * @returns A VLQ-encoded string representation of the segment
+     *
+     * @remarks
+     * The encoding process:
+     * 1. Adjusts line and column values (subtracts 1 to convert from 1-based to 0-based)
+     * 2. Calculates relative differences between current values and previous offsets
+     * 3. Creates an array with the following components:
+     *    - generatedColumn difference
+     *    - sourceIndex difference (0 if unchanged)
+     *    - line difference
+     *    - column difference
+     *    - nameIndex difference (only if nameIndex is present)
+     * 4. Updates the segment offset state for the next encoding
+     * 5. Returns the array as a VLQ-encoded string
+     *
+     * This method implements the source map V3 specification's delta encoding scheme
+     * where values are stored as differences from previous positions.
+     *
+     * @since 1.0.0
      */
 
     private encodeSegment(segmentOffset: SegmentOffsetInterface, segmentObject: SegmentInterface): string {
@@ -339,10 +362,24 @@ export class MappingProvider {
     }
 
     /**
-     * Encodes the entire mapping array into a VLQ-encoded mapping string.
+     * Encodes a mapping array into a VLQ-encoded mapping string following the source map V3 spec.
      *
-     * @param map - The mapping array to encode.
-     * @returns The encoded mapping string.
+     * @param map - The mapping array to encode, organized by generated lines and segments
+     * @returns A complete VLQ-encoded mapping string with line and segment separators
+     *
+     * @remarks
+     * The encoding process:
+     * 1. Initializes position offsets to track state across the entire mapping
+     * 2. Processes each frame (line) in the mapping array:
+     *    - Resets generated column offset to 0 at the start of each line
+     *    - Encodes each segment within the line using relative VLQ encoding
+     *    - Joins segments with commas (,)
+     * 3. Joins lines with semicolons (;)
+     *
+     * Empty frames are preserved as empty strings in the output to maintain
+     * the correct line numbering in the resulting source map.
+     *
+     * @since 1.0.0
      */
 
     private encodeMappings(map: MapType): string {
@@ -360,11 +397,29 @@ export class MappingProvider {
     }
 
     /**
-     * Decodes a VLQ-encoded segment into a segment object based on the current offset.
+     * Converts a VLQ-decoded segment array into a structured segment object.
      *
-     * @param segmentOffset - The current segment offset.
-     * @param decodedSegment - The decoded VLQ segment values.
-     * @returns The decoded segment object.
+     * @param segmentOffset - The current positional state tracking offsets
+     * @param decodedSegment - Array of VLQ-decoded values representing relative offsets
+     * @returns A complete segment object with absolute positions
+     *
+     * @remarks
+     * The decoding process:
+     * 1. Extracts position values from the decoded array:
+     *    - [0]: generatedColumn delta
+     *    - [1]: sourceIndex delta
+     *    - [2]: sourceLine delta
+     *    - [3]: sourceColumn delta
+     *    - [4]: nameIndex delta (optional)
+     * 2. Updates the segmentOffset state by adding each delta
+     * 3. Constructs a segment object with absolute positions (adding 1 to convert
+     *    from 0-based to 1-based coordinates)
+     * 4. Handles nameIndex appropriately (null if not present in the input)
+     *
+     * This method implements the inverse operation of the delta encoding scheme
+     * defined in the source map V3 specification.
+     *
+     * @since 1.0.0
      */
 
     private decodedSegment(segmentOffset: SegmentOffsetInterface, decodedSegment: Array<number>): SegmentInterface {
@@ -386,12 +441,31 @@ export class MappingProvider {
     }
 
     /**
-     * Decodes a VLQ-encoded mapping string into the internal mapping representation.
+     * Decodes a VLQ-encoded mapping string into the internal mapping data structure.
      *
-     * @param encodedMap - The VLQ-encoded mapping string.
-     * @param namesOffset - Offset for the names index.
-     * @param sourceOffset - Offset for the sources index.
-     * @throws { Error } - Throws an error if the mapping string is invalid.
+     * @param encodedMap - The VLQ-encoded mapping string from a source map
+     * @param namesOffset - Base offset for name indices in the global names array
+     * @param sourceOffset - Base offset for source indices in the global sources array
+     *
+     * @remarks
+     * The decoding process:
+     * 1. Validates the mapping string format before processing
+     * 2. Splits the string into frames using semicolons (;) as line separators
+     * 3. Initializes position offsets with the provided name and source offsets
+     * 4. For each frame (line):
+     *    - Adds `null` to the mapping array if the frame is empty
+     *    - Resets the generated column offset to 0 for each new line
+     *    - Sets the generated line index using the offset + current index
+     *    - Splits segments using commas (,) and decodes each segment
+     *    - Transforms each decoded segment into a segment object
+     * 5. Updates the internal mapping array with the decoded data
+     *
+     * Error handling includes validation checks and descriptive error messages
+     * indicating which frame caused a decoding failure.
+     *
+     * @throws Error - When the mapping string format is invalid or decoding fails
+     *
+     * @since 1.0.0
      */
 
     private decodeMappingString(encodedMap: string, namesOffset: number, sourceOffset: number): void {
@@ -422,22 +496,32 @@ export class MappingProvider {
     }
 
     /**
-     * Decodes a mapping array into the internal mapping representation, adjusting for offsets.
+     * Decodes a structured mapping array into the internal mapping representation.
      *
-     * This method processes each frame in the provided structured mapping array,
-     * validating each segment within the frame and adjusting the indices based on the
-     * specified offsets for names and sources. If a frame is invalid or not an array,
-     * an error will be thrown.
+     * @param encodedMap - The structured mapping array (array of frames, with each frame being an array of segments)
+     * @param namesOffset - Offset to add to each segment's nameIndex (for merging multiple source maps)
+     * @param sourceOffset - Offset to add to each segment's sourceIndex (for merging multiple source maps)
      *
-     * @param encodedMap - The structured mapping array, which should be an array of frames,
-     *                     where each frame is an array of segments. Each segment must conform
-     *                     to the SegmentInterface.
-     * @param namesOffset - Offset for the names index, which will be added to each segment's nameIndex.
-     * @param sourceOffset - Offset for the sources index, which will be added to each segment's sourceIndex.
-     * @throws { Error } - Throws an error if:
-     *                   - The mapping array is invalid (not an array).
-     *                   - Any frame is not an array.
-     *                   - Any segment does not conform to the SegmentInterface.
+     * @remarks
+     * The decoding process:
+     * 1. Validates that the input is a properly structured array
+     * 2. Tracks the current line offset based on the existing mapping length
+     * 3. For each frame (line) in the mapping:
+     *    - Preserves null frames as-is (representing empty lines)
+     *    - Validates that each frame is an array
+     *    - For each segment in a frame:
+     *      - Validates the segment structure
+     *      - Applies the name and source offsets
+     *      - Adjusts the generated line index by the line offset
+     *    - Adds the processed frame to the internal mapping array
+     *
+     * This method is primarily used when combining multiple source maps or
+     * importing mapping data from pre-structured arrays rather than VLQ strings.
+     * The offsets enable proper indexing when concatenating multiple mappings.
+     *
+     * @throws Error - When the input format is invalid or segments don't conform to requirements
+     *
+     * @since 1.0.0
      */
 
     private decodeMappingArray(encodedMap: MapType, namesOffset: number, sourceOffset: number): void {

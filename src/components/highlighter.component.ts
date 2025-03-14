@@ -14,19 +14,20 @@ import { SyntaxKind } from 'typescript';
 /**
  * An enum containing ANSI escape sequences for various colors.
  *
+ * @remarks
  * This enum is primarily intended for terminal output and won't work directly in JavaScript for web development.
- * It defines color codes for various colors and a reset code to return to
- * the default text color.
+ * It defines color codes for various colors and a reset code to return to the default text color.
  *
  * @example
- * ```typescript
- * console.log(`${Colors.red}This the text will be red in the terminal.${Colors.reset}`);
+ * ```ts
+ * console.log(`${ Colors.red }This text will be red in the terminal.${ Colors.reset }`);
  * ```
  *
- * This functionality is limited to terminal environments.
- * Consider alternative methods
- * for color highlighting in web development contexts, such as CSS classes.
+ * @see Colors.reset
+ *
+ * @since 1.0.0
  */
+
 
 export const enum Colors {
     reset = '\x1b[0m',
@@ -46,13 +47,21 @@ export const enum Colors {
 
 /**
  * Default color scheme for semantic highlighting.
- * This scheme uses red color for all code elements.
+ *
+ * @remarks
+ * This scheme defines colors for different code elements to be used for syntax highlighting.
  *
  * @example
+ * ```ts
  * const scheme = defaultScheme;
- * console.log(scheme.typeColor); // Outputs: the red color code
+ * console.log(scheme.typeColor); // Outputs: the color code for types
+ * ```
+ *
+ * @see HighlightSchemeInterface
+ * @see Colors
+ *
+ * @since 1.0.0
  */
-
 
 const defaultScheme: HighlightSchemeInterface = {
     enumColor: Colors.burntOrange,
@@ -77,27 +86,35 @@ const defaultScheme: HighlightSchemeInterface = {
 /**
  * Class responsible for applying semantic highlighting to a source code string based on a given color scheme.
  *
- * @class
+ * @remarks
+ * Processes TypeScript AST nodes and applies color formatting to different code elements
+ * according to the provided color scheme.
  *
- * @param sourceFile - The TypeScript AST node representing the source file.
- * @param code - The source code string to be highlighted.
- * @param schema - The color scheme used for highlighting different elements in the code.
+ * @example
+ * ```ts
+ * const sourceFile = ts.createSourceFile('example.ts', code, ts.ScriptTarget.Latest);
+ * const highlighter = new CodeHighlighter(sourceFile, code, customScheme);
+ * highlighter.parseNode(sourceFile);
+ * const highlightedCode = highlighter.highlight();
+ * console.log(highlightedCode);
+ * ```
  *
- * const highlighter = new CodeHighlighter(sourceFile, code, schema);
+ * @see HighlightSchemeInterface
+ * @see highlightCode
+ *
+ * @since 1.0.0
  */
 
 export class CodeHighlighter {
 
     /**
-     * A Map of segments where the key is a combination of start and end positions,
-     * and the value is an object containing the color and reset code.
+     * A Map of segments where the key is a combination of start and end positions.
+     *
+     * @remarks
      * This structure ensures unique segments and allows for fast lookups and updates.
      *
-     * @example
-     * this.segments = new Map([
-     *   ['0-10', { start: 1, end: 11, color: '\x1b[31m', reset: '\x1b[0m' }],
-     *   ['11-20', { start: 12, end: 20, color: '\x1b[32m', reset: '\x1b[0m' }]
-     * ]);
+     * @see HighlightNodeSegmentInterface
+     * @since 1.0.0
      */
 
     private segments: Map<string, HighlightNodeSegmentInterface> = new Map();
@@ -105,9 +122,11 @@ export class CodeHighlighter {
     /**
      * Creates an instance of the CodeHighlighter class.
      *
-     * @param sourceFile - The TypeScript AST node representing the source file.
-     * @param code - The source code string to be highlighted.
-     * @param schema - The color scheme used for highlighting different elements in the code.
+     * @param sourceFile - The TypeScript AST node representing the source file
+     * @param code - The source code string to be highlighted
+     * @param schema - The color scheme used for highlighting different elements in the code
+     *
+     * @since 1.0.0
      */
 
     constructor(private sourceFile: ts.Node, private code: string, private schema: HighlightSchemeInterface) {
@@ -116,7 +135,9 @@ export class CodeHighlighter {
     /**
      * Parses a TypeScript AST node and processes its comments to identify segments that need highlighting.
      *
-     * @param node - The TypeScript AST node to be parsed.
+     * @param node - The TypeScript AST node to be parsed
+     *
+     * @since 1.0.0
      */
 
     parseNode(node: ts.Node): void {
@@ -128,10 +149,13 @@ export class CodeHighlighter {
     /**
      * Generates a string with highlighted code segments based on the provided color scheme.
      *
+     * @returns The highlighted code as a string, with ANSI color codes applied to the segments
+     *
+     * @remarks
      * This method processes the stored segments, applies the appropriate colors to each segment,
      * and returns the resulting highlighted code as a single string.
      *
-     * @returns The highlighted code as a string, with ANSI color codes applied to the segments.
+     * @since 1.0.0
      */
 
     highlight(): string {
@@ -165,15 +189,34 @@ export class CodeHighlighter {
     }
 
     /**
-     * Extracts a substring from the code based on the specified start and end positions.
+     * Extracts a text segment from the source code using position indices.
      *
-     * This method is used to retrieve the source code segment that corresponds to the
-     * given start and end positions. It is primarily used for highlighting specific
-     * segments of the code.
+     * @param start - The starting index position in the source text
+     * @param end - The ending index position in the source text (optional)
+     * @returns The substring of source text between the start and end positions
      *
-     * @param start - The starting index of the segment to be extracted.
-     * @param end - The ending index of the segment to be extracted.
-     * @returns The extracted substring from the code.
+     * @remarks
+     * This utility method provides access to specific portions of the source code
+     * based on character positions. When the end parameter is omitted, the extraction
+     * will continue to the end of the source text.
+     *
+     * This method is typically used during the highlighting process to access the
+     * actual text content that corresponds to syntax nodes or other text ranges
+     * before applying formatting.
+     *
+     * @example
+     * ```ts
+     * // Extract a variable name
+     * const variableName = this.getSegmentSource(10, 15);
+     *
+     * // Extract from a position to the end of source
+     * const remaining = this.getSegmentSource(100);
+     * ```
+     *
+     * @see addSegment
+     * @see highlight
+     *
+     * @since 1.0.0
      */
 
     private getSegmentSource(start: number, end?: number): string {
@@ -181,13 +224,34 @@ export class CodeHighlighter {
     }
 
     /**
-     * Adds a new segment to the list of segments to be highlighted.
-     * The segment is defined by its start and end positions, the color to apply, and an optional reset code.
+     * Registers a text segment for syntax highlighting with specified style information.
      *
-     * @param start - The starting index of the segment in the code string.
-     * @param end - The ending index of the segment in the code string.
-     * @param color - The color code to apply to the segment.
-     * @param reset - The color reset code to apply after the segment, Defaults to the reset code defined in `Colors.reset`.
+     * @param start - The starting position of the segment in the source text
+     * @param end - The ending position of the segment in the source text
+     * @param color - The color code to apply to this segment
+     * @param reset - The color reset code to apply after the segment (defaults to the standard reset code)
+     *
+     * @remarks
+     * This method creates a unique key for each segment based on its position and stores the segment information in a map.
+     * Each segment contains its position information, styling code,
+     * and reset code which will later be used during the highlighting process.
+     *
+     * If multiple segments are added with the same positions, the later additions will
+     * overwrite earlier ones due to the map's key-based storage.
+     *
+     * @example
+     * ```ts
+     * // Highlight a variable name in red
+     * this.addSegment(10, 15, Colors.red);
+     *
+     * // Highlight a keyword with custom color and reset
+     * this.addSegment(20, 26, Colors.blue, Colors.customReset);
+     * ```
+     *
+     * @see Colors
+     * @see processNode
+     *
+     * @since 1.0.0
      */
 
     private addSegment(start: number, end: number, color: string, reset: string = Colors.reset) {
@@ -196,10 +260,35 @@ export class CodeHighlighter {
     }
 
     /**
-     * Processes comments within a TypeScript AST node and adds segments for highlighting.
-     * Extracts trailing and leading comments from the node and adds them as segments using the color defined in `this.colorSchema.comments`.
+     * Processes and highlights comments associated with a TypeScript AST node.
      *
-     * @param node - The TypeScript AST node whose comments are to be processed.
+     * @param node - The TypeScript AST node whose comments are to be processed
+     *
+     * @remarks
+     * This method identifies both leading and trailing comments associated with the given node
+     * and adds them to the highlighting segments.
+     * The comments are extracted from the full source text using TypeScript's utility functions
+     * and are highlighted using the color specified
+     * in the schema's commentColor property.
+     *
+     * Leading comments appear before the node, while trailing comments appear after it.
+     * Both types are processed with the same highlighting style.
+     *
+     * @example
+     * ```ts
+     * // For a node that might have comments like:
+     * // This is a leading comment
+     * const x = 5; // This is a trailing comment
+     *
+     * this.processComments(someNode);
+     * // Both comments will be added to segments with the comment color
+     * ```
+     *
+     * @see addSegment
+     * @see ts.getLeadingCommentRanges
+     * @see ts.getTrailingCommentRanges
+     *
+     * @since 1.0.0
      */
 
     private processComments(node: ts.Node): void {
@@ -212,18 +301,35 @@ export class CodeHighlighter {
     }
 
     /**
-     * Processes the keywords within a TypeScript AST node and adds them as segments for highlighting.
+     * Processes TypeScript keywords and primitive type references in an AST node for syntax highlighting.
      *
-     * This method identifies potential keyword tokens within the provided node and adds them to the
-     * list of segments with the color defined in `this.schema.keywordColor`.
-     * The method considers the current node, its first token, and its last token to determine if they should be highlighted
-     * as keywords.
+     * @param node - The TypeScript AST node to be processed for keywords
      *
-     * The method checks if the node's kind falls within the range of keyword kinds defined by TypeScript.
-     * If the node or any of its tokens are identified as keywords, a segment is added to `this.segments`
-     * with the start and end positions of the node and the specified color for keywords.
+     * @remarks
+     * This method handles two categories of tokens that require special highlighting:
      *
-     * @param  node - The TypeScript AST node to be processed for keywords.
+     * 1. Primitive type references: Highlights references to built-in types like `null`,
+     *    `void`, `string`, `number`, `boolean`, and `undefined` using the type color.
+     *
+     * 2. TypeScript keywords: Identifies any node whose kind falls within the TypeScript
+     *    keyword range (between FirstKeyword and LastKeyword) and highlights it using
+     *    the keyword color.
+     *
+     * Each identified token is added to the segments collection with appropriate position
+     * and color information.
+     *
+     * @example
+     * ```ts
+     * // Inside syntax highlighting process
+     * this.processKeywords(someNode);
+     * // If the node represents a keyword like 'const' or a primitive type like 'string',
+     * // it will be added to the segments with the appropriate color
+     * ```
+     *
+     * @see addSegment
+     * @see ts.SyntaxKind
+     *
+     * @since 1.0.0
      */
 
     private processKeywords(node: ts.Node): void {
@@ -244,14 +350,37 @@ export class CodeHighlighter {
     }
 
     /**
-     * Processes identifiers within a TypeScript AST node and adds them as segments for highlighting
-     * based on the node's parent type.
+     * Processes identifier nodes and applies appropriate syntax highlighting based on their context.
      *
-     * This method determines the appropriate color for an identifier based on its parent node's kind.
-     * If the parent node matches one of the specified kinds, the identifier is highlighted with a cyan color.
-     * Supported parent kinds include various declarations, expressions, and signatures.
+     * @param node - The TypeScript AST node representing the identifier to be processed
      *
-     * @param node - The TypeScript AST node representing the identifier to be processed.
+     * @remarks
+     * This method determines the appropriate color for an identifier by examining its parent node's kind.
+     * Different colors are applied based on the identifier's role in the code:
+     * - Enum members use enumColor
+     * - Interface names use interfaceColor
+     * - Class names use classColor
+     * - Function and method names use functionColor
+     * - Parameters use parameterColor
+     * - Variables and properties use variableColor
+     * - Types use typeColor
+     * - And more specialized cases for other syntax kinds
+     *
+     * Special handling is applied to property access expressions to differentiate between
+     * the object being accessed and the property being accessed.
+     *
+     * @example
+     * ```ts
+     * // Inside the CodeHighlighter class
+     * const identifierNode = getIdentifierNode(); // Get some identifier node
+     * this.processIdentifier(identifierNode);
+     * // The identifier is now added to segments with appropriate color based on its context
+     * ```
+     *
+     * @see addSegment
+     * @see HighlightSchemeInterface
+     *
+     * @since 1.0.0
      */
 
     private processIdentifier(node: ts.Node): void {
@@ -311,13 +440,24 @@ export class CodeHighlighter {
     }
 
     /**
-     * Processes a TypeScript template expression and adds segments for highlighting its literal parts.
+     * Processes a TypeScript template expression and adds highlighting segments for its literal parts.
      *
-     * This method adds a segment for the head of the template expression with the color specified in `this.schema.stringColor`.
-     * It also processes each template span within the expression, adding
-     * segments for each span's literal part.
+     * @param templateExpression - The TypeScript template expression to be processed
      *
-     * @param templateExpression - The TypeScript template expression to be processed.
+     * @remarks
+     * This method adds color segments for both the template head and each template span's literal part.
+     * All template string components are highlighted using the color defined in the schema's stringColor.
+     *
+     * @example
+     * ```ts
+     * // Given a template expression like: `Hello ${name}`
+     * this.processTemplateExpression(templateNode);
+     * // Both "Hello " and the closing part after the expression will be highlighted
+     * ```
+     *
+     * @see addSegment
+     *
+     * @since 1.0.0
      */
 
     private processTemplateExpression(templateExpression: ts.TemplateExpression): void {
@@ -333,13 +473,30 @@ export class CodeHighlighter {
     }
 
     /**
-     * Processes a TypeScript AST node and adds segments for highlighting based on the node's kind.
+     * Processes a TypeScript AST node and adds highlighting segments based on the node's kind.
      *
-     * This method identifies the kind of the node and determines the appropriate color for highlighting.
-     * It handles various node kinds including string literals, regular expressions, template expressions, and identifiers.
-     * Specific methods are invoked for more complex node kinds, such as template expressions and identifiers.
+     * @param node - The TypeScript AST node to be processed
      *
-     * @param  node - The TypeScript AST node to be processed.
+     * @remarks
+     * This method identifies the node's kind and applies the appropriate color for highlighting.
+     * It handles various syntax kinds including literals (string, numeric, regular expressions),
+     * template expressions, identifiers, and type references.
+     * For complex node types like template expressions and identifiers, it delegates to specialized processing methods.
+     *
+     * @throws Error - When casting to TypeParameterDeclaration fails for non-compatible node kinds
+     *
+     * @example
+     * ```ts
+     * // Inside the CodeHighlighter class
+     * const node = sourceFile.getChildAt(0);
+     * this.processNode(node);
+     * // Node is now added to the segments map with appropriate colors
+     * ```
+     *
+     * @see processTemplateExpression
+     * @see processIdentifier
+     *
+     * @since 1.0.0
      */
 
     private processNode(node: ts.Node): void {
@@ -370,22 +527,30 @@ export class CodeHighlighter {
 /**
  * Applies semantic highlighting to the provided code string using the specified color scheme.
  *
- * @param code - The source code to be highlighted.
- * @param schema - An optional partial schema defining the color styles for various code elements.
- *                 Defaults to an empty object, which means no specific highlighting will be applied.
+ * @param code - The source code to be highlighted
+ * @param schema - An optional partial schema defining the color styles for various code elements
  *
- * @returns A string with the code elements wrapped in the appropriate color styles as specified by the schema.
+ * @returns A string with the code elements wrapped in the appropriate color styles
+ *
+ * @remarks
+ * If no schema is provided, the default schema will be used. The function creates a TypeScript
+ * source file from the provided code and walks through its AST to apply syntax highlighting.
  *
  * @example
+ * ```ts
  * const code = 'const x: number = 42;';
  * const schema = {
  *   keywordColor: '\x1b[34m', // Blue
- *   stringColor: '\x1b[32m',  // Green
  *   numberColor: '\x1b[31m',  // Red
- *   reset: '\x1b[0m'          // Reset
  * };
  * const highlightedCode = highlightCode(code, schema);
  * console.log(highlightedCode);
+ * ```
+ *
+ * @see CodeHighlighter
+ * @see HighlightSchemeInterface
+ *
+ * @since 1.0.0
  */
 
 export function highlightCode(code: string, schema: Partial<HighlightSchemeInterface> = {}) {
