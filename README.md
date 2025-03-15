@@ -80,31 +80,22 @@ console.log(sourceService.sources); // Updated source paths
 ```
 
 ## Parsing Error Stack Traces
-The parseErrorStack function parses an error stack trace and returns an array of stack entries.
-Each entry contains information about the function call, file, line number, column number, and if applicable, details about the eval context.
-Example:
+The parseErrorStack function parses an error stack trace and returns an array of stack entries. 
+Each entry contains information about the function call, file, line number, column number, 
+and if applicable, details about the eval context.
+
+### Example:
 ```typescript
 import { parseErrorStack } from '@remotex-labs/xmap';
 
-// Example stack trace string
-const stackTrace = `
-Error: Example error
-    at Object.<anonymous> (/path/to/file.js:10:15)
-    at Module._compile (node:internal/modules/cjs/loader:1217:14)
-    at node:internal/modules/cjs/loader:1308:14
-    at node:internal/modules/cjs/loader:1425:5
-    at node:internal/modules/cjs/loader:1425:5
-    at node:internal/modules/cjs/loader:1483:3
-    at node:internal/modules/cjs/loader:1700:8
-    at node:internal/modules/cjs/loader:1760:3
-    at /path/to/file.js:10:15
-    at Object.<anonymous> (/path/to/file.js:10:15)
-    at eval (eval at <anonymous> (/path/to/file.js:10:15), <anonymous>:1:1)
-`;
-
-// Parsing the stack trace
-const parsedStack = parseErrorStack(stackTrace);
-console.log(parsedStack);
+// Example with Error object
+try {
+    throw new Error('Example error');
+} catch (error) {
+    // Parsing the stack trace from an Error object
+    const parsedStack = parseErrorStack(error);
+    console.log(parsedStack);
+}
 ```
 
 ## highlightCode

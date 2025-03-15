@@ -18,82 +18,77 @@ import { MappingProvider } from '@providers/mapping.provider';
 import { Bias } from '@providers/interfaces/mapping.interface';
 
 /**
- * A service for validating and processing source maps.
- * This class allows parsing and manipulation of source maps, providing functionality such as
- * retrieving position mappings between original and generated code, concatenating source maps,
- * and getting code snippets based on mappings.
+ * A service for validating and processing source maps that provides functionality for parsing,
+ * position mapping, concatenation, and code snippet extraction.
+ *
+ * @param source - Source map data (SourceService, SourceMapInterface object, or JSON string)
+ * @param file - Optional file name for the generated bundle
+ * @returns A new SourceService instance
  *
  * @example
  * ```ts
  * const sourceMapJSON = '{"version": 3, "file": "bundle.js", "sources": ["foo.ts"], "names": [], "mappings": "AAAA"}';
  * const sourceService = new SourceService(sourceMapJSON);
- *
- * console.log(sourceService.file); // Outputs: 'bundle.js'
+ * console.log(sourceService.file); // 'bundle.js'
  * ```
+ *
+ * @since 1.0.0
  */
 
 export class SourceService {
     /**
-     * The name of the generated file (bundle) that this source map applies to.
+     * The name of the generated file this source map applies to.
      *
-     * @example
-     * ```ts
-     * console.log(sourceService.file); // 'bundle.js'
-     * ```
+     * @since 1.0.0
      */
 
     readonly file: string | null;
 
     /**
-     * A MappingProvider instance of base64 VLQ-encoded mappings.
+     * Provider for accessing and manipulating the base64 VLQ-encoded mappings.
+     *
+     * @since 1.0.0
      */
 
     readonly mappings: MappingProvider;
 
     /**
-     * The root URL for the sources, if present in the source map.
+     * The root URL for resolving relative paths in the source files.
+     * @since 1.0.0
      */
 
     readonly sourceRoot: string | null;
 
     /**
-     * A list of symbol names used by the “mappings” entry.
+     * List of symbol names referenced by the mappings.
+     * @since 1.0.0
      */
 
     readonly names: Array<string>;
 
     /**
-     * An array of source file paths.
+     * Array of source file paths.
+     * @since 1.0.0
      */
 
     readonly sources: Array<string>;
 
     /**
-     * An array of source files contents.
+     * Array of source file contents.
+     * @since 1.0.0
      */
 
     readonly sourcesContent: Array<string>;
 
     /**
-     * Creates a new instance of the `SourceService` class.
+     * Creates a new SourceService instance.
      *
-     * This constructor initializes the class using either a `SourceMapInterface` object,
-     * a JSON string representing the source map, or an existing `SourceService` instance.
-     * It validates the source map and populates its properties such as `file`, `sources`, and `mappings`.
+     * @param source - Source map data (SourceService, SourceMapInterface object, or JSON string)
+     * @param file - Optional file name for the generated bundle
      *
-     * @param source - Can be one of the following:
-     *   - An object conforming to the `SourceMapInterface`.
-     *   - A JSON string representing the source map.
-     *   - A `SourceService` instance to copy the properties.
-     * @param file - (Optional) A string representing the file name of the generated bundle.
-     *               Defaults to `null`. It will overwrite any existing `file` property in the source map.
-     * @throws {Error} - If the source map does not contain required properties or has an invalid format.
+     * @throws Error - When a source map has an invalid format or missing required properties
      *
-     * @example
-     * ```ts
-     * const sourceMapJSON = '{"version": 3, "file": "bundle.js", "sources": ["foo.ts"], "names": [], "mappings": "AAAA"}';
-     * const sourceService = new SourceService(sourceMapJSON);
-     * ```
+     * @since 1.0.0
      */
 
     constructor(source: SourceService);
@@ -114,15 +109,17 @@ export class SourceService {
     }
 
     /**
-     * Converts the current source map data into a plain object format.
+     * Converts the source map data to a plain object.
      *
-     * @returns The source map json object.
+     * @returns A SourceMapInterface object representing the current state
      *
      * @example
      * ```ts
      * const mapObject = sourceService.getMapObject();
      * console.log(mapObject.file); // 'bundle.js'
      * ```
+     *
+     * @since 1.0.0
      */
 
     getMapObject(): SourceMapInterface {
@@ -144,19 +141,19 @@ export class SourceService {
     }
 
     /**
-     * Concatenates one or more source maps to the current source map.
+     * Concatenates additional source maps into the current instance.
      *
-     * This method merges additional source maps into the current source map,
-     * updating the `mappings`, `names`, `sources`, and `sourcesContent` arrays.
-     *
-     * @param maps - An array of `SourceMapInterface` or `SourceService` instances to be concatenated.
-     * @throws { Error } If no source maps are provided for concatenation.
+     * @param maps - Source maps to concatenate with the current map
      *
      * @example
      * ```ts
      * sourceService.concat(anotherSourceMap);
      * console.log(sourceService.sources); // Updated source paths
      * ```
+     *
+     * @throws Error - When no maps are provided
+     *
+     * @since 1.0.0
      */
 
     concat(...maps: Array<SourceMapInterface | SourceService>): void {
@@ -172,17 +169,20 @@ export class SourceService {
     }
 
     /**
-     * Creates a new instance of `SourceService` with concatenated source maps.
+     * Creates a new SourceService instance with concatenated source maps.
      *
-     * @param maps - An array of `SourceMapInterface` or `SourceService` instances to be concatenated.
-     * @returns { SourceService } A new `SourceService` instance with the concatenated maps.
-     * @throws { Error } If no source maps are provided.
+     * @param maps - Source maps to concatenate with a copy of the current map
+     * @returns A new SourceService instance with the combined maps
      *
      * @example
      * ```ts
      * const newService = sourceService.concatNewMap(anotherSourceMap);
-     * console.log(newService.file); // The file from the new source map
+     * console.log(newService.sources); // Combined sources array
      * ```
+     *
+     * @throws Error - When no maps are provided
+     *
+     * @since 1.0.0
      */
 
     concatNewMap(...maps: Array<SourceMapInterface | SourceService>): SourceService {
@@ -201,19 +201,21 @@ export class SourceService {
     }
 
     /**
-     * Retrieves the position information based on the original source line and column.
+     * Finds position in generated code based on original source position.
      *
-     * @param line - The line number in the generated code.
-     * @param column - The column number in the generated code.
-     * @param sourceIndex - The index or file path of the original source.
-     * @param bias - The bias to use when matching positions (`Bias.LOWER_BOUND`, `Bias.UPPER_BOUND`, or `Bias.BOUND`).
-     * @returns { PositionInterface | null } The corresponding position in the original source, or `null` if not found.
+     * @param line - Line number in the original source
+     * @param column - Column number in the original source
+     * @param sourceIndex - Index or file path of the original source
+     * @param bias - Position matching strategy (default: Bias.BOUND)
+     * @returns Position information or null if not found
      *
      * @example
      * ```ts
      * const position = sourceService.getPositionByOriginal(1, 10, 'foo.ts');
-     * console.log(position?.line); // The line number in the original source
+     * console.log(position?.generatedLine); // Line in generated code
      * ```
+     *
+     * @since 1.0.0
      */
 
     getPositionByOriginal(line: number, column: number, sourceIndex: number | string, bias: Bias = Bias.BOUND): PositionInterface | null {
@@ -241,19 +243,20 @@ export class SourceService {
     }
 
     /**
-     * Retrieves the position in the original source code based on a given line and column
-     * in the generated code.
+     * Finds position in an original source based on generated code position.
      *
-     * @param line - Line number in the generated code.
-     * @param column - Column number in the generated code.
-     * @param bias - The bias to use for matching positions. Defaults to `Bias.BOUND`.
-     * @returns {PositionInterface | null} The position in the original source, or null if not found.
+     * @param line - Line number in the generated code
+     * @param column - Column number in the generated code
+     * @param bias - Position matching strategy (default: Bias.BOUND)
+     * @returns Position information or null if not found
      *
      * @example
      * ```ts
      * const position = sourceService.getPosition(2, 15);
-     * console.log(position?.source); // The original source file
+     * console.log(position?.source); // Original source file
      * ```
+     *
+     * @since 1.0.0
      */
 
     getPosition(line: number, column: number, bias: Bias = Bias.BOUND): PositionInterface | null {
@@ -274,18 +277,20 @@ export class SourceService {
     }
 
     /**
-     * Retrieves the position and original source content for a given position in the generated code.
+     * Retrieves position with source content for a location in generated code.
      *
-     * @param line - Line number in the generated code.
-     * @param column - Column number in the generated code.
-     * @param bias - Bias used for position matching.
-     * @returns { PositionWithContentInterface | null } The position and its associated content, or `null` if not found.
+     * @param line - Line number in the generated code
+     * @param column - Column number in the generated code
+     * @param bias - Position matching strategy (default: Bias.BOUND)
+     * @returns Position with content information or null if not found
      *
      * @example
      * ```ts
-     * const positionWithContent = sourceService.getPositionWithContent(3, 5);
-     * console.log(positionWithContent?.sourcesContent); // The source code content
+     * const posWithContent = sourceService.getPositionWithContent(3, 5);
+     * console.log(posWithContent?.sourcesContent); // Original source content
      * ```
+     *
+     * @since 1.0.0
      */
 
     getPositionWithContent(line: number, column: number, bias: Bias = Bias.BOUND): PositionWithContentInterface | null {
@@ -300,20 +305,24 @@ export class SourceService {
     }
 
     /**
-     * Retrieves the position and a code snippet from the original source based on the given
-     * generated code position, with additional lines of code around the matching line.
+     * Retrieves position with a code snippet from the original source.
      *
-     * @param line - Line number in the generated code.
-     * @param column - Column number in the generated code.
-     * @param bias - Bias used for position matching.
-     * @param options - (Optional) Extra options for the amount of surrounding lines to include.
-     * @returns { PositionWithCodeInterface | null } The position and code snippet.
+     * @param line - Line number in the generated code
+     * @param column - Column number in the generated code
+     * @param bias - Position matching strategy (default: Bias.BOUND)
+     * @param options - Configuration for the amount of surrounding lines
+     * @returns Position with code snippet or null if not found
      *
      * @example
      * ```ts
-     * const positionWithCode = sourceService.getPositionWithCode(4, 8, Bias.BOUND, { linesBefore: 2, linesAfter: 2 });
-     * console.log(positionWithCode?.code); // The code snippet from the original source
+     * const posWithCode = sourceService.getPositionWithCode(4, 8, Bias.BOUND, {
+     *   linesBefore: 2,
+     *   linesAfter: 2
+     * });
+     * console.log(posWithCode?.code); // Code snippet with context
      * ```
+     *
+     * @since 1.0.0
      */
 
     getPositionWithCode(line: number, column: number, bias: Bias = Bias.BOUND, options?: SourceOptionsInterface): PositionWithCodeInterface | null {
@@ -340,14 +349,17 @@ export class SourceService {
     }
 
     /**
-     * Converts the current source map object to a JSON string.
+     * Serializes the source map to a JSON string.
      *
-     * @returns A stringified version of the source map object.
+     * @returns JSON string representation of the source map
      *
      * @example
      * ```ts
-     * console.log(sourceService.toString()); // JSON string of the source map
+     * const jsonString = sourceService.toString();
+     * console.log(jsonString); // '{"version":3,"file":"bundle.js",...}'
      * ```
+     *
+     * @since 1.0.0
      */
 
     toString(): string {
@@ -355,26 +367,13 @@ export class SourceService {
     }
 
     /**
-     * Validates the provided source map object.
+     * Validates a source map object has all required properties.
      *
-     * This method checks whether all required keys are present in the source map object.
-     * It throws an error if any required keys are missing.
+     * @param input - Source map object to validate
      *
-     * @private
-     * @param input - The source map object to be validated.
-     * @throws Error If any required key is missing from the source map.
+     * @throws Error - When required properties are missing
      *
-     * @example
-     * ```ts
-     * const sourceMap = {
-     *     version: 3,
-     *     file: 'example.js',
-     *     names: ['src', 'maps', 'example', 'function', 'line', 'column'],
-     *     sources: ['source1.js', 'source2.js'],
-     *     mappings: 'AAAA,SAASA,CAAC,CAAC,CAAC;AAAA,CAAC,CAAC;AAAC,CAAC',
-     * };
-     * sourceService['validateSource'](sourceMap); // Throws if invalid
-     * ```
+     * @since 1.0.0
      */
 
     private validateSourceMap(input: SourceMapInterface): void {
