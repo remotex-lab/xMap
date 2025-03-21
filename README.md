@@ -27,6 +27,8 @@ You can create an instance of `SourceService` using either a `SourceMapInterface
 a JSON string representing the source map, or an existing `SourceService` instance.
 Example:
 ```typescript
+import { SourceService } from '@remotex-labs/xmap';
+
 const sourceMapJSON = `
 {
   "version": 3,
@@ -86,7 +88,7 @@ and if applicable, details about the eval context.
 
 ### Example:
 ```typescript
-import { parseErrorStack } from '@remotex-labs/xmap';
+import { parseErrorStack } from '@remotex-labs/xmap/parser.component';
 
 // Example with Error object
 try {
@@ -105,7 +107,7 @@ and applies syntax highlighting according to the given schema.
 
 Example:
 ```typescript
-import { highlightCode } from '@remotex-labs/xmap';
+import { highlightCode } from '@remotex-labs/xmap/highlighter.component';
 
 // TypeScript code to be highlighted
 const codeToHighlight = `
@@ -138,7 +140,8 @@ This utility is useful for displaying code snippets in a user-friendly manner, p
 
 Example:
 ```typescript
-import { formatCode, highlightCode } from '@remotex-labs/xmap';
+import { formatCode } from '@remotex-labs/xmap/formatter.component';
+import { highlightCode } from '@remotex-labs/xmap/highlighter.component';
 
 const code = `
 function greet(name: string) {
@@ -169,7 +172,9 @@ applying special highlighting to indicate where the error occurred. This functio
 as it helps to visually identify issues in the source code.
 
 ```typescript
-import { highlightCode, SourceService, formatErrorCode } from '@remotex-labs/xmap';
+import { SourceService } from '@remotex-labs/xmap';
+import { highlightCode } from '@remotex-labs/xmap/highlighter.component';
+import { formatErrorCode } from '@remotex-labs/xmap/formatter.component';
 
 const sourceMapJSON = `
 {
