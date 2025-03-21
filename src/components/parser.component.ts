@@ -130,11 +130,10 @@ export function normalizePath(filePath: string): string {
 export function createDefaultFrame(source: string): StackFrame {
     return {
         source,
-        isEval: false,
-        fileName: null,
-        lineNumber: null,
-        columnNumber: null,
-        functionName: null
+        eval: false,
+        async: false,
+        native: false,
+        constructor: false
     };
 }
 
@@ -154,8 +153,8 @@ export function createDefaultFrame(source: string): StackFrame {
  * @since 2.1.0
  */
 
-export function safeParseInt(value: string | undefined | null): number | null {
-    return value && value.trim() !== '' ? parseInt(value, 10) : null;
+export function safeParseInt(value: string | undefined | null): number | undefined {
+    return value && value.trim() !== '' ? parseInt(value, 10) : undefined;
 }
 
 /**
@@ -191,21 +190,22 @@ export function parseV8StackLine(line: string): StackFrame {
     // Check for eval format first
     const evalMatch = line.match(PATTERNS.V8.EVAL);
     if (evalMatch) {
-        frame.isEval = true;
-        frame.functionName = evalMatch[1] || '<anonymous>';
+        frame.eval = true;
+        frame.functionName = evalMatch[1] ? evalMatch[1] : undefined;
 
         // Add eval origin information
         frame.evalOrigin = {
-            fileName: normalizePath(evalMatch[3]) || null,
-            lineNumber: safeParseInt(evalMatch[4]),
-            columnNumber: safeParseInt(evalMatch[5]),
+            line: safeParseInt(evalMatch[4]) ?? undefined,
+            column: safeParseInt(evalMatch[5]) ?? undefined,
+            fileName: evalMatch[3] ? normalizePath(evalMatch[3]) : undefined,
             functionName: evalMatch[2] || '<anonymous>'
         };
 
         // Position inside evaluated code
-        frame.fileName = normalizePath(evalMatch[6]) || '<anonymous>';
-        frame.lineNumber = safeParseInt(evalMatch[7]);
-        frame.columnNumber = safeParseInt(evalMatch[8]);
+        frame.line = safeParseInt(evalMatch[7]) ?? undefined;
+        frame.column = safeParseInt(evalMatch[8]) ?? undefined;
+        frame.fileName = evalMatch[6] ? normalizePath(evalMatch[6]) : undefined;
+        frame.native = (frame.fileName ?? '').startsWith('node') ?? false;
 
         return frame;
     }
@@ -213,14 +213,22 @@ export function parseV8StackLine(line: string): StackFrame {
     // Standard V8 format
     const match = line.match(PATTERNS.V8.STANDARD);
     if (match) {
-        frame.functionName = match[1] ? match[1].trim() : null;
+        frame.functionName = match[1] ? match[1].trim() : undefined;
+
+        if(line.toLowerCase().includes('new'))
+            frame.constructor = true;
+
+        if(line.toLowerCase().includes('async'))
+            frame.async = true;
 
         if (match[5] === 'native') {
+            frame.native = true;
             frame.fileName = '[native code]';
         } else {
-            frame.fileName = normalizePath(match[2]) || null;
-            frame.lineNumber = safeParseInt(match[3]);
-            frame.columnNumber = safeParseInt(match[4]);
+            frame.line = safeParseInt(match[3]) ?? undefined;
+            frame.column = safeParseInt(match[4]) ?? undefined;
+            frame.fileName = match[2] ? normalizePath(match[2]) : undefined;
+            frame.native = (frame.fileName ?? '').startsWith('node') ?? false;
         }
     }
 
@@ -258,20 +266,26 @@ export function parseSpiderMonkeyStackLine(line: string): StackFrame {
     // Check for eval/Function format
     const evalMatch = line.match(PATTERNS.SPIDERMONKEY.EVAL);
     if (evalMatch) {
-        frame.isEval = true;
-        frame.functionName = evalMatch[1] || null;
+        frame.eval = true;
+        frame.functionName = evalMatch[1] ? evalMatch[1] : undefined;
+
+        if(line.toLowerCase().includes('constructor'))
+            frame.constructor = true;
+
+        if(line.toLowerCase().includes('async'))
+            frame.async = true;
 
         // Add eval origin information
         frame.evalOrigin = {
-            fileName: normalizePath(evalMatch[6]) || null,
-            lineNumber: safeParseInt(evalMatch[7]),
-            columnNumber: safeParseInt(evalMatch[8]),
-            functionName: evalMatch[5]
+            line: safeParseInt(evalMatch[7]) ?? undefined,
+            column: safeParseInt(evalMatch[8]) ?? undefined,
+            fileName: normalizePath(evalMatch[6]),
+            functionName: evalMatch[5] ? evalMatch[5] : undefined
         };
 
         // Position inside evaluated code
-        frame.lineNumber = safeParseInt(evalMatch[3]);
-        frame.columnNumber = safeParseInt(evalMatch[4]);
+        frame.line = safeParseInt(evalMatch[3]) ?? undefined;
+        frame.column = safeParseInt(evalMatch[4]) ?? undefined;
 
         return frame;
     }
@@ -279,14 +293,14 @@ export function parseSpiderMonkeyStackLine(line: string): StackFrame {
     // Standard SpiderMonkey format
     const match = line.match(PATTERNS.SPIDERMONKEY.STANDARD);
     if (match) {
-        frame.functionName = match[1] || null;
-        frame.fileName = normalizePath(match[2]) || null;
+        frame.functionName = match[1] ? match[1] : undefined;
+        frame.fileName = normalizePath(match[2]);
 
         if (match[3] === '[native code]') {
             frame.fileName = '[native code]';
         } else {
-            frame.lineNumber = safeParseInt(match[4]);
-            frame.columnNumber = safeParseInt(match[5]);
+            frame.line = safeParseInt(match[4]) ?? undefined;
+            frame.column = safeParseInt(match[5]) ?? undefined;
         }
     }
 
@@ -324,18 +338,22 @@ export function parseJavaScriptCoreStackLine(line: string): StackFrame {
     // Standard JavaScriptCore format
     const match = line.match(PATTERNS.JAVASCRIPT_CORE.STANDARD);
     if (match) {
-        const funcName = match[2];
+        frame.functionName = match[2];
+        frame.eval = (match[1] === 'eval' || match[3] === 'eval');
 
-        // Handle "global code" as a special case
-        frame.functionName = (funcName && funcName !== 'global code') ? funcName : null;
-        frame.isEval = (match[1] === 'eval' || match[3] === 'eval');
+        if(line.toLowerCase().includes('constructor'))
+            frame.constructor = true;
+
+        if(line.toLowerCase().includes('async'))
+            frame.async = true;
 
         if (match[3] === '[native code]') {
+            frame.native = true;
             frame.fileName = '[native code]';
         } else {
-            frame.fileName = normalizePath(match[3]) || null;
-            frame.lineNumber = safeParseInt(match[4]);
-            frame.columnNumber = safeParseInt(match[5]);
+            frame.line = safeParseInt(match[4]) ?? undefined;
+            frame.column = safeParseInt(match[5]) ?? undefined;
+            frame.fileName = normalizePath(match[3]);
         }
     }
 
@@ -419,8 +437,8 @@ export function parseErrorStack(error: Error | string): ParsedStackTrace {
     const engine = detectJSEngine(stack);
     const stackLines = stack.split('\n')
         .map(line => line.trim())
-        .filter(line => !line.includes(`${name}: ${message}`))
-        .filter(line => line.trim() !== '');
+        .filter(line => line.trim() !== '')
+        .slice(1);
 
     return {
         name,
