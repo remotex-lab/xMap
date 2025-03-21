@@ -16,12 +16,29 @@ base64Chars.forEach((char, index) => {
 });
 
 /**
- * Encodes a given number using Variable-Length Quantity (VLQ) encoding.
- * Negative numbers are encoded by converting to a non-negative representation.
- * The continuation bit is used to indicate if more bytes follow.
+ * Encodes a given number using Variable-Length Quantity (VLQ) encoding. Negative numbers are encoded by
+ * converting to a non-negative representation and the continuation bit is used to indicate if more bytes follow.
  *
- * @param value - The number to be encoded.
- * @returns The VLQ encoded string.
+ * @param value - The number to be encoded
+ * @returns The VLQ encoded string represented as Base64 characters
+ *
+ * @throws Error - If the value cannot be properly encoded
+ *
+ * @remarks The encoding process shifts the value left by 1 bit to accommodate a sign bit in the least significant position.
+ * Negative values have their sign bit set to 1, while positive values have it set to 0.
+ *
+ * @example
+ * ```ts
+ * // Encoding a positive number
+ * const encoded = encodeVLQ(25);  // Returns "Y"
+ *
+ * // Encoding a negative number
+ * const encodedNegative = encodeVLQ(-25);  // Returns "Z"
+ * ```
+ *
+ * @see decodeVLQ - For the corresponding decode function
+ *
+ * @since 1.0.0
  */
 
 export function encodeVLQ(value: number): string {
@@ -50,24 +67,52 @@ export function encodeVLQ(value: number): string {
 }
 
 /**
- * Encodes an array of numbers using VLQ encoding.
- * Each number in the array is individually encoded and the results are concatenated.
+ * Encodes an array of numbers using VLQ encoding by individually encoding each number and concatenating the results.
  *
- * @param values - The array of numbers to be encoded.
- * @returns The concatenated VLQ encoded string.
+ * @param values - The array of numbers to be encoded
+ * @returns The concatenated VLQ encoded string
+ *
+ * @example
+ * ```ts
+ * // Encoding multiple values
+ * const encoded = encodeArrayVLQ([1, 0, -5]);  // Returns "CAAK"
+ * ```
+ *
+ * @see encodeVLQ - The underlying function used to encode each number
+ *
+ * @since 1.0.0
  */
+
 
 export function encodeArrayVLQ(values: number[]): string {
     return values.map(encodeVLQ).join('');
 }
 
 /**
- * Decodes a VLQ encoded string back into an array of numbers.
- * Each character is decoded using the Base64 map and continuation bits are processed.
+ * Decodes a VLQ encoded string back into an array of numbers by processing Base64 characters and continuation bits.
  *
- * @param data - The VLQ encoded string.
- * @returns The array of decoded numbers.
- * @throws Error If the string contains invalid Base64 characters.
+ * @param data - The VLQ encoded string
+ * @returns The array of decoded numbers
+ *
+ * @throws Error - If the string contains invalid Base64 characters
+ *
+ * @remarks The decoding process examines each Base64 character,
+ * checking for continuation bits and progressively building up numeric values.
+ * The sign bit is extracted from the least significant position
+ * to determine if the original number was negative.
+ *
+ * @example
+ * ```ts
+ * // Decoding a simple VLQ string
+ * const decoded = decodeVLQ("Y");  // Returns [25]
+ *
+ * // Decoding multiple values
+ * const multiDecoded = decodeVLQ("CAAK");  // Returns [1, 0, -5]
+ * ```
+ *
+ * @see encodeVLQ - For the corresponding encode function
+ *
+ * @since 1.0.0
  */
 
 export function decodeVLQ(data: string): number[] {
