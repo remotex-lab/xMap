@@ -28,7 +28,12 @@ const config: Array<xBuildConfig> = [
             packages: 'external',
             sourcemap: true,
             sourceRoot: `https://github.com/remotex-lab/xmap/tree/v${ pkg.version }/`,
-            entryPoints: [ 'src/index.ts' ]
+            entryPoints: {
+                'index': 'src/index.ts',
+                'parser.component': 'src/components/parser.component.ts',
+                'formatter.component': 'src/components/formatter.component.ts',
+                'highlighter.component': 'src/components/highlighter.component.ts'
+            }
         }
     },
     {

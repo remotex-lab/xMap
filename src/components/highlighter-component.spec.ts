@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { formatErrorCode } from '@components/formatter.component';
 import { CodeHighlighter, Colors, highlightCode } from '@components/highlighter.component';
+import type { PositionWithCodeInterface } from '@services/interfaces/source-service.interface';
 
 const schema = {
     enumColor: Colors.burntOrange,
@@ -205,7 +206,7 @@ describe('Process Node', () => {
 describe('formatErrorCode', () => {
     test('should format code with error highlight with custom color', () => {
         const code = 'line1\nline2\nline3';
-        const sourcePosition = {
+        const sourcePosition = <PositionWithCodeInterface> {
             code,
             line: 3,
             column: 4,
@@ -225,7 +226,7 @@ describe('formatErrorCode', () => {
 
     test('should format code with error highlight', () => {
         const code = 'line1\nline2\nline3';
-        const sourcePosition = {
+        const sourcePosition = <PositionWithCodeInterface> {
             code,
             line: 2,
             name: '',

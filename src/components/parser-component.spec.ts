@@ -200,17 +200,17 @@ describe('safeParseInt', () => {
 
     describe('null and undefined handling', () => {
         test('should return null for undefined input', () => {
-            expect(safeParseInt(undefined)).toBeNull();
+            expect(safeParseInt(undefined)).toBeUndefined();
         });
 
         test('should return null for null input', () => {
-            expect(safeParseInt(null)).toBeNull();
+            expect(safeParseInt(null)).toBeUndefined();
         });
     });
 
     describe('falsy string handling', () => {
         test('should return null for empty string', () => {
-            expect(safeParseInt('')).toBeNull();
+            expect(safeParseInt('')).toBeUndefined();
         });
     });
 
@@ -224,7 +224,7 @@ describe('safeParseInt', () => {
         });
 
         test('should handle string with only whitespace', () => {
-            expect(safeParseInt('   ')).toBeNull(); // Empty strings are falsy
+            expect(safeParseInt('   ')).toBeUndefined(); // Empty strings are falsy
         });
 
         test('should return NaN for unparseable strings', () => {
@@ -245,13 +245,12 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'eval',
                 fileName: '<anonymous>',
-                lineNumber: 2,
-                columnNumber: 10,
-                isEval: true,
+                line: 2,
+                column: 10,
+                eval: true,
                 evalOrigin: {
-                    fileName: null,
-                    lineNumber: 20,
-                    columnNumber: 25,
+                    line: 20,
+                    column: 25,
                     functionName: '<anonymous>'
                 }
             }
@@ -262,13 +261,13 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'test',
                 fileName: '<anonymous>',
-                lineNumber: 1,
-                columnNumber: 25,
-                isEval: true,
+                line: 1,
+                column: 25,
+                eval: true,
                 evalOrigin: {
                     fileName: 'chromewebdata/',
-                    lineNumber: 2,
-                    columnNumber: 5,
+                    line: 2,
+                    column: 5,
                     functionName: '<anonymous>'
                 }
             }
@@ -279,13 +278,13 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'eval',
                 fileName: '<anonymous>',
-                lineNumber: 1,
-                columnNumber: 45,
-                isEval: true,
+                line: 1,
+                column: 45,
+                eval: true,
                 evalOrigin: {
                     fileName: 'chromewebdata/',
-                    lineNumber: 2,
-                    columnNumber: 5,
+                    line: 2,
+                    column: 5,
                     functionName: '<anonymous>'
                 }
             }
@@ -294,11 +293,10 @@ describe('parseV8StackLine', () => {
             description: 'simple anonymous stack line',
             input: 'at <anonymous>:2:5',
             expected: {
-                functionName: null,
                 fileName: '<anonymous>',
-                lineNumber: 2,
-                columnNumber: 5,
-                isEval: false
+                line: 2,
+                column: 5,
+                eval: false
             }
         },
         {
@@ -307,13 +305,13 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'eval',
                 fileName: '<anonymous>',
-                lineNumber: 5,
-                columnNumber: 15,
-                isEval: true,
+                line: 5,
+                column: 15,
+                eval: true,
                 evalOrigin: {
                     fileName: '/Users/name/project/run.js',
-                    lineNumber: 30,
-                    columnNumber: 10,
+                    line: 30,
+                    column: 10,
                     functionName: 'runScript'
                 }
             }
@@ -324,13 +322,13 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'eval',
                 fileName: '<anonymous>',
-                lineNumber: 1,
-                columnNumber: 5,
-                isEval: true,
+                line: 1,
+                column: 5,
+                eval: true,
                 evalOrigin: {
                     fileName: '/source.js',
-                    lineNumber: 10,
-                    columnNumber: 15,
+                    line: 10,
+                    column: 15,
                     functionName: 'evalFn'
                 }
             }
@@ -341,13 +339,12 @@ describe('parseV8StackLine', () => {
             expected: {
                 functionName: 'test',
                 fileName: '<anonymous>',
-                lineNumber: 1,
-                columnNumber: 25,
-                isEval: true,
+                line: 1,
+                column: 25,
+                eval: true,
                 evalOrigin: {
-                    fileName: null,
-                    lineNumber: 35,
-                    columnNumber: 7,
+                    line: 35,
+                    column: 7,
                     functionName: 'fs:/src/script.js'
                 }
             }
@@ -360,16 +357,16 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe(expected.functionName);
             expect(result.fileName).toBe(expected.fileName);
-            expect(result.lineNumber).toBe(expected.lineNumber);
-            expect(result.columnNumber).toBe(expected.columnNumber);
-            expect(result.isEval).toBe(expected.isEval);
+            expect(result.line).toBe(expected.line);
+            expect(result.column).toBe(expected.column);
+            expect(result.eval).toBe(expected.eval);
 
             if (expected.evalOrigin) {
                 expect(result.evalOrigin).toBeDefined();
                 if (result.evalOrigin) {
                     expect(result.evalOrigin.fileName).toBe(expected.evalOrigin.fileName);
-                    expect(result.evalOrigin.lineNumber).toBe(expected.evalOrigin.lineNumber);
-                    expect(result.evalOrigin.columnNumber).toBe(expected.evalOrigin.columnNumber);
+                    expect(result.evalOrigin.line).toBe(expected.evalOrigin.line);
+                    expect(result.evalOrigin.column).toBe(expected.evalOrigin.column);
                     expect(result.evalOrigin.functionName).toBe(expected.evalOrigin.functionName);
                 }
             } else {
@@ -386,20 +383,20 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('processTicksAndRejections');
             expect(result.fileName).toBe('node:internal/process/task_queues');
-            expect(result.lineNumber).toBe(95);
-            expect(result.columnNumber).toBe(5);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(95);
+            expect(result.column).toBe(5);
+            expect(result.eval).toBe(false);
         });
 
         test('should parse anonymous function stack line', () => {
             const line = 'at /path/to/file.js:10:15';
             const result = parseV8StackLine(line);
 
-            expect(result.functionName).toBeNull();
+            expect(result.functionName).toBeUndefined();
             expect(result.fileName).toBe('/path/to/file.js');
-            expect(result.lineNumber).toBe(10);
-            expect(result.columnNumber).toBe(15);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(10);
+            expect(result.column).toBe(15);
+            expect(result.eval).toBe(false);
         });
 
         test('should handle native code references', () => {
@@ -408,9 +405,9 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('Function.Module._resolveFilename');
             expect(result.fileName).toBe('[native code]');
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
+            expect(result.eval).toBe(false);
         });
 
         test('should handle stack lines with spaces in function names', () => {
@@ -419,9 +416,9 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('Object.<anonymous>');
             expect(result.fileName).toBe('/path/to/file.js');
-            expect(result.lineNumber).toBe(20);
-            expect(result.columnNumber).toBe(30);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(20);
+            expect(result.column).toBe(30);
+            expect(result.eval).toBe(false);
         });
 
         test('should parse stack line with weird file path', () => {
@@ -430,9 +427,9 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('Module._compile');
             expect(result.fileName).toBe('C:/Users/name/project/file.js'); // Normalized path
-            expect(result.lineNumber).toBe(100);
-            expect(result.columnNumber).toBe(10);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(100);
+            expect(result.column).toBe(10);
+            expect(result.eval).toBe(false);
         });
     });
 
@@ -443,14 +440,14 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('eval');
             expect(result.fileName).toBe('<anonymous>');
-            expect(result.lineNumber).toBe(1);
-            expect(result.columnNumber).toBe(5);
-            expect(result.isEval).toBe(true);
+            expect(result.line).toBe(1);
+            expect(result.column).toBe(5);
+            expect(result.eval).toBe(true);
 
             if (result.evalOrigin) {
                 expect(result.evalOrigin.fileName).toBe('/source.js');
-                expect(result.evalOrigin.lineNumber).toBe(10);
-                expect(result.evalOrigin.columnNumber).toBe(15);
+                expect(result.evalOrigin.line).toBe(10);
+                expect(result.evalOrigin.column).toBe(15);
                 expect(result.evalOrigin.functionName).toBe('evalFn');
             } else {
                 fail('evalOrigin should be defined');
@@ -463,14 +460,14 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('eval');
             expect(result.fileName).toBe('<anonymous>');
-            expect(result.lineNumber).toBe(2);
-            expect(result.columnNumber).toBe(10);
-            expect(result.isEval).toBe(true);
+            expect(result.line).toBe(2);
+            expect(result.column).toBe(10);
+            expect(result.eval).toBe(true);
 
             if (result.evalOrigin) {
-                expect(result.evalOrigin.fileName).toBeNull();
-                expect(result.evalOrigin.lineNumber).toBe(20);
-                expect(result.evalOrigin.columnNumber).toBe(25);
+                expect(result.evalOrigin.fileName).toBeUndefined();
+                expect(result.evalOrigin.line).toBe(20);
+                expect(result.evalOrigin.column).toBe(25);
                 expect(result.evalOrigin.functionName).toBe('<anonymous>');
             } else {
                 fail('evalOrigin should be defined');
@@ -483,14 +480,14 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('eval');
             expect(result.fileName).toBe('<anonymous>');
-            expect(result.lineNumber).toBe(5);
-            expect(result.columnNumber).toBe(15);
-            expect(result.isEval).toBe(true);
+            expect(result.line).toBe(5);
+            expect(result.column).toBe(15);
+            expect(result.eval).toBe(true);
 
             if (result.evalOrigin) {
                 expect(result.evalOrigin.fileName).toBe('/Users/name/project/run.js');
-                expect(result.evalOrigin.lineNumber).toBe(30);
-                expect(result.evalOrigin.columnNumber).toBe(10);
+                expect(result.evalOrigin.line).toBe(30);
+                expect(result.evalOrigin.column).toBe(10);
                 expect(result.evalOrigin.functionName).toBe('runScript');
             } else {
                 fail('evalOrigin should be defined');
@@ -504,10 +501,10 @@ describe('parseV8StackLine', () => {
             const result = parseV8StackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
         });
 
         test('should handle empty string', () => {
@@ -515,10 +512,10 @@ describe('parseV8StackLine', () => {
             const result = parseV8StackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
         });
 
         test('should handle stack lines with unusual characters', () => {
@@ -527,8 +524,8 @@ describe('parseV8StackLine', () => {
 
             expect(result.functionName).toBe('weird$Function__name!');
             expect(result.fileName).toBe('/path with spaces/file.js');
-            expect(result.lineNumber).toBe(50);
-            expect(result.columnNumber).toBe(20);
+            expect(result.line).toBe(50);
+            expect(result.column).toBe(20);
         });
     });
 });
@@ -541,20 +538,20 @@ describe('parseSpiderMonkeyStackLine', () => {
 
             expect(result.functionName).toBe('someFunction');
             expect(result.fileName).toBe('/path/to/file.js');
-            expect(result.lineNumber).toBe(123);
-            expect(result.columnNumber).toBe(45);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(123);
+            expect(result.column).toBe(45);
+            expect(result.eval).toBe(false);
         });
 
         test('should parse anonymous function stack line', () => {
             const line = '@/path/to/file.js:50:25';
             const result = parseSpiderMonkeyStackLine(line);
 
-            expect(result.functionName).toBeNull();
+            expect(result.functionName).toBeUndefined();
             expect(result.fileName).toBe('/path/to/file.js');
-            expect(result.lineNumber).toBe(50);
-            expect(result.columnNumber).toBe(25);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(50);
+            expect(result.column).toBe(25);
+            expect(result.eval).toBe(false);
         });
 
         test('should handle native code references', () => {
@@ -563,9 +560,9 @@ describe('parseSpiderMonkeyStackLine', () => {
 
             expect(result.functionName).toBe('Array.prototype.forEach');
             expect(result.fileName).toBe('[native code]');
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
+            expect(result.eval).toBe(false);
         });
 
         test('should handle stack lines with file URLs', () => {
@@ -574,9 +571,9 @@ describe('parseSpiderMonkeyStackLine', () => {
 
             expect(result.functionName).toBe('main');
             expect(result.fileName).toBe('/Users/name/project/main.js');
-            expect(result.lineNumber).toBe(30);
-            expect(result.columnNumber).toBe(15);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(30);
+            expect(result.column).toBe(15);
+            expect(result.eval).toBe(false);
         });
 
         test('should normalize Windows paths', () => {
@@ -585,9 +582,9 @@ describe('parseSpiderMonkeyStackLine', () => {
 
             expect(result.functionName).toBe('processData');
             expect(result.fileName).toBe('C:/Users/name/project/script.js');
-            expect(result.lineNumber).toBe(75);
-            expect(result.columnNumber).toBe(20);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(75);
+            expect(result.column).toBe(20);
+            expect(result.eval).toBe(false);
         });
     });
 
@@ -597,14 +594,14 @@ describe('parseSpiderMonkeyStackLine', () => {
             const result = parseSpiderMonkeyStackLine(line);
 
             expect(result.functionName).toBe('evaluatedFunction');
-            expect(result.isEval).toBe(true);
-            expect(result.lineNumber).toBe(3);
-            expect(result.columnNumber).toBe(10);
+            expect(result.eval).toBe(true);
+            expect(result.line).toBe(3);
+            expect(result.column).toBe(10);
 
             if (result.evalOrigin) {
                 expect(result.evalOrigin.fileName).toBe('/source.js');
-                expect(result.evalOrigin.lineNumber).toBe(15);
-                expect(result.evalOrigin.columnNumber).toBe(5); // Always 1 in Spider Monkey format
+                expect(result.evalOrigin.line).toBe(15);
+                expect(result.evalOrigin.column).toBe(5); // Always 1 in Spider Monkey format
                 expect(result.evalOrigin.functionName).toBe('eval');
             } else {
                 fail('evalOrigin should be defined');
@@ -615,15 +612,15 @@ describe('parseSpiderMonkeyStackLine', () => {
             const line = '@eval:5:20, eval@/script.js:25:10';
             const result = parseSpiderMonkeyStackLine(line);
 
-            expect(result.functionName).toBeNull();
-            expect(result.isEval).toBe(true);
-            expect(result.lineNumber).toBe(5);
-            expect(result.columnNumber).toBe(20);
+            expect(result.functionName).toBeUndefined();
+            expect(result.eval).toBe(true);
+            expect(result.line).toBe(5);
+            expect(result.column).toBe(20);
 
             if (result.evalOrigin) {
                 expect(result.evalOrigin.fileName).toBe('/script.js');
-                expect(result.evalOrigin.lineNumber).toBe(25);
-                expect(result.evalOrigin.columnNumber).toBe(10);
+                expect(result.evalOrigin.line).toBe(25);
+                expect(result.evalOrigin.column).toBe(10);
                 expect(result.evalOrigin.functionName).toBe('eval');
             } else {
                 fail('evalOrigin should be defined');
@@ -635,14 +632,14 @@ describe('parseSpiderMonkeyStackLine', () => {
             const result = parseSpiderMonkeyStackLine(line);
 
             expect(result.functionName).toBe('newFunction');
-            expect(result.isEval).toBe(true);
-            expect(result.lineNumber).toBe(1);
-            expect(result.columnNumber).toBe(33);
+            expect(result.eval).toBe(true);
+            expect(result.line).toBe(1);
+            expect(result.column).toBe(33);
 
             if (result.evalOrigin) {
                 expect(result.evalOrigin.fileName).toBe('/app.js');
-                expect(result.evalOrigin.lineNumber).toBe(42);
-                expect(result.evalOrigin.columnNumber).toBe(15);
+                expect(result.evalOrigin.line).toBe(42);
+                expect(result.evalOrigin.column).toBe(15);
                 expect(result.evalOrigin.functionName).toBe('createFunction');
             } else {
                 fail('evalOrigin should be defined');
@@ -656,10 +653,10 @@ describe('parseSpiderMonkeyStackLine', () => {
             const result = parseSpiderMonkeyStackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
         });
 
         test('should handle empty string', () => {
@@ -667,10 +664,10 @@ describe('parseSpiderMonkeyStackLine', () => {
             const result = parseSpiderMonkeyStackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
         });
 
         test('should handle function names with @ symbol', () => {
@@ -681,8 +678,8 @@ describe('parseSpiderMonkeyStackLine', () => {
             // Testing the actual behavior
             expect(result.source).toBe(line);
             expect(result.fileName).toBe('/path/to/file.js');
-            expect(result.lineNumber).toBe(10);
-            expect(result.columnNumber).toBe(5);
+            expect(result.line).toBe(10);
+            expect(result.column).toBe(5);
         });
 
         test('should handle special characters in file paths', () => {
@@ -691,8 +688,8 @@ describe('parseSpiderMonkeyStackLine', () => {
 
             expect(result.functionName).toBe('handler');
             expect(result.fileName).toBe('/path/with spaces and (brackets)/file.js');
-            expect(result.lineNumber).toBe(60);
-            expect(result.columnNumber).toBe(15);
+            expect(result.line).toBe(60);
+            expect(result.column).toBe(15);
         });
     });
 });
@@ -705,9 +702,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('functionName');
             expect(result.fileName).toBe('http://example.com/script.js');
-            expect(result.lineNumber).toBe(123);
-            expect(result.columnNumber).toBe(45);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(123);
+            expect(result.column).toBe(45);
+            expect(result.eval).toBe(false);
         });
 
         test('should parse JavaScript Core stack trace with global code in eval', () => {
@@ -716,9 +713,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('code');
             expect(result.fileName).toBe('eval');
-            expect(result.lineNumber).toBe(1);
-            expect(result.columnNumber).toBe(5);
-            expect(result.isEval).toBe(true);
+            expect(result.line).toBe(1);
+            expect(result.column).toBe(5);
+            expect(result.eval).toBe(true);
         });
 
         test('should parse JavaScript Core stack trace with eval code in regular file', () => {
@@ -727,9 +724,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('code');
             expect(result.fileName).toBe('main.js');
-            expect(result.lineNumber).toBe(10);
-            expect(result.columnNumber).toBe(15);
-            expect(result.isEval).toBe(true);
+            expect(result.line).toBe(10);
+            expect(result.column).toBe(15);
+            expect(result.eval).toBe(true);
         });
 
         test('should handle global code as null function name', () => {
@@ -738,9 +735,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('code');
             expect(result.fileName).toBe('http://example.com/script.js');
-            expect(result.lineNumber).toBe(50);
-            expect(result.columnNumber).toBe(25);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(50);
+            expect(result.column).toBe(25);
+            expect(result.eval).toBe(false);
         });
 
         test('should handle native code references', () => {
@@ -749,9 +746,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('Array.prototype.forEach');
             expect(result.fileName).toBe('[native code]');
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
+            expect(result.eval).toBe(false);
         });
 
         test('should handle file paths', () => {
@@ -760,9 +757,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('processData');
             expect(result.fileName).toBe('/Users/name/project/script.js');
-            expect(result.lineNumber).toBe(75);
-            expect(result.columnNumber).toBe(20);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(75);
+            expect(result.column).toBe(20);
+            expect(result.eval).toBe(false);
         });
 
         test('should normalize Windows paths', () => {
@@ -771,9 +768,9 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('handler');
             expect(result.fileName).toBe('C:/Users/name/project/script.js');
-            expect(result.lineNumber).toBe(60);
-            expect(result.columnNumber).toBe(15);
-            expect(result.isEval).toBe(false);
+            expect(result.line).toBe(60);
+            expect(result.column).toBe(15);
+            expect(result.eval).toBe(false);
         });
     });
 
@@ -783,12 +780,12 @@ describe('parseJavaScriptCoreStackLine', () => {
             const result = parseJavaScriptCoreStackLine(line);
 
             expect(result.functionName).toBe('code');
-            expect(result.isEval).toBe(true);
+            expect(result.eval).toBe(true);
             // Note: The implementation in the code doesn't parse filename or line numbers for eval code
             // If it should, these assertions would need to change
             expect(result.fileName).toBe('http://example.com/script.js');
-            expect(result.lineNumber).toBe(10);
-            expect(result.columnNumber).toBe(5);
+            expect(result.line).toBe(10);
+            expect(result.column).toBe(5);
         });
     });
 
@@ -798,11 +795,11 @@ describe('parseJavaScriptCoreStackLine', () => {
             const result = parseJavaScriptCoreStackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
-            expect(result.isEval).toBe(false);
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
+            expect(result.eval).toBe(false);
         });
 
         test('should handle empty string', () => {
@@ -810,11 +807,11 @@ describe('parseJavaScriptCoreStackLine', () => {
             const result = parseJavaScriptCoreStackLine(line);
 
             expect(result.source).toBe(line);
-            expect(result.functionName).toBeNull();
-            expect(result.fileName).toBeNull();
-            expect(result.lineNumber).toBeNull();
-            expect(result.columnNumber).toBeNull();
-            expect(result.isEval).toBe(false);
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBeUndefined();
+            expect(result.line).toBeUndefined();
+            expect(result.column).toBeUndefined();
+            expect(result.eval).toBe(false);
         });
 
         test('should handle function names with @ symbol', () => {
@@ -833,8 +830,8 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('render');
             expect(result.fileName).toBe('http://example.com/script.js?v=123');
-            expect(result.lineNumber).toBe(30);
-            expect(result.columnNumber).toBe(10);
+            expect(result.line).toBe(30);
+            expect(result.column).toBe(10);
         });
 
         test('should handle function with dots in the name', () => {
@@ -843,8 +840,8 @@ describe('parseJavaScriptCoreStackLine', () => {
 
             expect(result.functionName).toBe('Class.method.callback');
             expect(result.fileName).toBe('http://example.com/app.js');
-            expect(result.lineNumber).toBe(42);
-            expect(result.columnNumber).toBe(18);
+            expect(result.line).toBe(42);
+            expect(result.column).toBe(18);
         });
     });
 });
@@ -869,7 +866,7 @@ describe('parseErrorStack', () => {
             // Check the first frame (this test file)
             const firstFrame = result.stack[0];
             expect(firstFrame.fileName).toBeDefined();
-            expect(firstFrame.lineNumber).toBeGreaterThan(0);
+            expect(firstFrame.line).toBeGreaterThan(0);
         });
 
         test('should parse an Error with custom name', () => {
@@ -1018,7 +1015,7 @@ describe('parseErrorStack', () => {
             // Create a SpiderMonkey-format stack trace
             function createSpiderMonkeyError() {
                 const e = new Error('SpiderMonkey error');
-                e.stack = `handleRequest@/path/to/server.js:12:34
+                e.stack = `Error Test\nhandleRequest@/path/to/server.js:12:34
 processRequest@/path/to/api.js:45:10
 @/path/to/main.js:5:1`;
 
@@ -1032,12 +1029,12 @@ processRequest@/path/to/api.js:45:10
 
             expect(result.stack[0].functionName).toBe('handleRequest');
             expect(result.stack[0].fileName).toBe('/path/to/server.js');
-            expect(result.stack[0].lineNumber).toBe(12);
+            expect(result.stack[0].line).toBe(12);
 
             expect(result.stack[1].functionName).toBe('processRequest');
             expect(result.stack[1].fileName).toBe('/path/to/api.js');
 
-            expect(result.stack[2].functionName).toBeNull();
+            expect(result.stack[2].functionName).toBeUndefined();
             expect(result.stack[2].fileName).toBe('/path/to/main.js');
         });
 
@@ -1045,7 +1042,7 @@ processRequest@/path/to/api.js:45:10
             // Create a JavaScriptCore-format stack trace
             function createJavaScriptCoreError() {
                 const e = new Error('JavaScriptCore error');
-                e.stack = `evaluateScript@[native code]
+                e.stack = `Error test\nevaluateScript@[native code]
 global code@http://example.com/script.js:10:15
 functionName@http://example.com/app.js:42:30`;
 

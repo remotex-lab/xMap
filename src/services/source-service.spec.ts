@@ -2,14 +2,14 @@
  * Import will remove at compile time
  */
 
-import type { PositionInterface, SourceMapInterface } from '@services/interfaces/source.interface';
+import type { PositionInterface, SourceMapInterface } from '@services/interfaces/source-service.interface';
 
 /**
  * Imports
  */
 
 import { SourceService } from '@services/source.service';
-import { Bias } from '@providers/interfaces/mapping.interface';
+import { Bias } from '@providers/interfaces/mapping-provider.interface';
 
 describe('SourceService', () => {
     describe('constructor', () => {

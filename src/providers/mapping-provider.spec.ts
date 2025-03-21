@@ -2,14 +2,14 @@
  * Import will remove at compile time
  */
 
-import type { MapType, SegmentInterface, SegmentOffsetInterface } from './interfaces/mapping.interface';
+import type { MapType, SegmentInterface, SegmentOffsetInterface } from './interfaces/mapping-provider.interface';
 
 /**
  * Imports
  */
 
 import { MappingProvider } from './mapping.provider';
-import { Bias } from './interfaces/mapping.interface';
+import { Bias } from './interfaces/mapping-provider.interface';
 
 describe('validateSegment', () => {
     let instance: MappingProvider;

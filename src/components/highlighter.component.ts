@@ -1,8 +1,14 @@
 /**
+ * Export interfaces
+ */
+
+export type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter-component.interface';
+
+/**
  * Import will remove at compile time
  */
 
-import type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter.interface';
+import type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter-component.interface';
 
 /**
  * Imports
@@ -12,7 +18,7 @@ import * as ts from 'typescript';
 import { SyntaxKind } from 'typescript';
 
 /**
- * An enum containing ANSI escape sequences for various colors.
+ * An enum containing ANSI escape sequences for various colors
  *
  * @remarks
  * This enum is primarily intended for terminal output and won't work directly in JavaScript for web development.
@@ -20,14 +26,11 @@ import { SyntaxKind } from 'typescript';
  *
  * @example
  * ```ts
- * console.log(`${ Colors.red }This text will be red in the terminal.${ Colors.reset }`);
+ * console.log(`${Colors.red}This text will be red in the terminal.${Colors.reset}`);
  * ```
- *
- * @see Colors.reset
  *
  * @since 1.0.0
  */
-
 
 export const enum Colors {
     reset = '\x1b[0m',
@@ -46,7 +49,7 @@ export const enum Colors {
 }
 
 /**
- * Default color scheme for semantic highlighting.
+ * Default color scheme for semantic highlighting
  *
  * @remarks
  * This scheme defines colors for different code elements to be used for syntax highlighting.
@@ -84,7 +87,7 @@ const defaultScheme: HighlightSchemeInterface = {
 };
 
 /**
- * Class responsible for applying semantic highlighting to a source code string based on a given color scheme.
+ * Class responsible for applying semantic highlighting to a source code string based on a given color scheme
  *
  * @remarks
  * Processes TypeScript AST nodes and applies color formatting to different code elements
@@ -96,11 +99,7 @@ const defaultScheme: HighlightSchemeInterface = {
  * const highlighter = new CodeHighlighter(sourceFile, code, customScheme);
  * highlighter.parseNode(sourceFile);
  * const highlightedCode = highlighter.highlight();
- * console.log(highlightedCode);
  * ```
- *
- * @see HighlightSchemeInterface
- * @see highlightCode
  *
  * @since 1.0.0
  */
