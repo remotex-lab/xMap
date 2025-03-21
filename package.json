@@ -37,13 +37,39 @@
     "exports": {
         "./package.json": "./package.json",
         ".": {
+            "types": "./dist/index.d.ts",
             "import": {
-                "types": "./dist/index.d.ts",
                 "default": "./dist/esm/index.js"
             },
             "require": {
-                "types": "./dist/index.d.ts",
                 "default": "./dist/cjs/index.js"
+            }
+        },
+        "./parser.component": {
+            "types": "./dist/components/parser.component.d.ts",
+            "import": {
+                "default": "./dist/esm/parser.component.js"
+            },
+            "require": {
+                "default": "./dist/cjs/parser.component.js"
+            }
+        },
+        "./formatter.component": {
+            "types": "./dist/components/formatter.component.d.ts",
+            "import": {
+                "default": "./dist/esm/formatter.component.js"
+            },
+            "require": {
+                "default": "./dist/cjs/formatter.component.js"
+            }
+        },
+        "./highlighter.component": {
+            "types": "./dist/components/highlighter.component.d.ts",
+            "import": {
+                "default": "./dist/esm/highlighter.component.js"
+            },
+            "require": {
+                "default": "./dist/cjs/highlighter.component.js"
             }
         }
     },
