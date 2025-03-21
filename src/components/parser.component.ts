@@ -2,13 +2,13 @@
  * Export interfaces
  */
 
-export { ParsedStackTrace, StackFrame } from '@components/interfaces/parse.interface';
+export { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-component.interface';
 
 /**
  * Import will remove at compile time
  */
 
-import type { ParsedStackTrace, StackFrame } from '@components/interfaces/parse.interface';
+import type { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-component.interface';
 
 /**
  * Regular expression patterns for different JavaScript engines' stack traces

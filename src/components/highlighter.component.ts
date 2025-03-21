@@ -2,13 +2,13 @@
  * Export interfaces
  */
 
-export type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter.interface';
+export type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter-component.interface';
 
 /**
  * Import will remove at compile time
  */
 
-import type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter.interface';
+import type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter-component.interface';
 
 /**
  * Imports

@@ -1,6 +1,7 @@
 import * as ts from 'typescript';
 import { formatErrorCode } from '@components/formatter.component';
 import { CodeHighlighter, Colors, highlightCode } from '@components/highlighter.component';
+import type { PositionWithCodeInterface } from '@services/interfaces/source-service.interface';
 
 const schema = {
     enumColor: Colors.burntOrange,

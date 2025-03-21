@@ -8,14 +8,14 @@ import type {
     SourceOptionsInterface,
     PositionWithCodeInterface,
     PositionWithContentInterface
-} from '@services/interfaces/source.interface';
+} from '@services/interfaces/source-service.interface';
 
 /**
  * Imports
  */
 
 import { MappingProvider } from '@providers/mapping.provider';
-import { Bias } from '@providers/interfaces/mapping.interface';
+import { Bias } from '@providers/interfaces/mapping-provider.interface';
 
 /**
  * A service for validating and processing source maps that provides functionality for parsing,

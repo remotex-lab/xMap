@@ -2,14 +2,14 @@
  * Export interfaces
  */
 
-export type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter.interface';
+export type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter-component.interface';
 
 /**
  * Import will remove at compile time
  */
 
-import type { PositionWithCodeInterface } from '@services/interfaces/source.interface';
-import type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter.interface';
+import type { PositionWithCodeInterface } from '@services/interfaces/source-service.interface';
+import type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter-component.interface';
 
 /**
  * Formats a code snippet with optional line padding and custom actions.

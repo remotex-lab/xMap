@@ -2,13 +2,13 @@
  * Import will remove at compile time
  */
 
-import type { MapType, FrameType, SegmentInterface, SegmentOffsetInterface } from './interfaces/mapping.interface';
+import type { MapType, FrameType, SegmentInterface, SegmentOffsetInterface } from './interfaces/mapping-provider.interface';
 
 /**
  * Imports
  */
 
-import { Bias } from './interfaces/mapping.interface';
+import { Bias } from './interfaces/mapping-provider.interface';
 import { decodeVLQ, encodeArrayVLQ } from '@components/base64.component';
 
 /**
