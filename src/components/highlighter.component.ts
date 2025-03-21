@@ -1,4 +1,10 @@
 /**
+ * Export interfaces
+ */
+
+export type { HighlightSchemeInterface, HighlightNodeSegmentInterface } from '@components/interfaces/highlighter.interface';
+
+/**
  * Import will remove at compile time
  */
 

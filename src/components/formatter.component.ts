@@ -1,4 +1,10 @@
 /**
+ * Export interfaces
+ */
+
+export type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter.interface';
+
+/**
  * Import will remove at compile time
  */
 

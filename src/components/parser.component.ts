@@ -1,4 +1,10 @@
 /**
+ * Export interfaces
+ */
+
+export { ParsedStackTrace, StackFrame } from '@components/interfaces/parse.interface';
+
+/**
  * Import will remove at compile time
  */
 
