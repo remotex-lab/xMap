@@ -2,7 +2,7 @@
  * Export interfaces
  */
 
-export { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-component.interface';
+export type * from '@components/interfaces/parse-component.interface';
 
 /**
  * Import will remove at compile time
