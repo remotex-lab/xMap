@@ -2,7 +2,7 @@
  * Export interfaces
  */
 
-export type { AnsiOptionInterface, FormatCodeInterface } from '@components/interfaces/formatter-component.interface';
+export type * from '@components/interfaces/formatter-component.interface';
 
 /**
  * Import will remove at compile time

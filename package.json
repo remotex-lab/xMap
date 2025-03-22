@@ -34,43 +34,39 @@
     "engines": {
         "node": ">=18"
     },
+    "typesVersions": {
+        "*": {
+            "parser.component": [
+                "./dist/components/parser.component.d.ts"
+            ],
+            "formatter.component": [
+                "./dist/components/formatter.component.d.ts"
+            ],
+            "highlighter.component": [
+                "./dist/components/highlighter.component.d.ts"
+            ]
+        }
+    },
     "exports": {
-        "./package.json": "./package.json",
         ".": {
             "types": "./dist/index.d.ts",
-            "import": {
-                "default": "./dist/esm/index.js"
-            },
-            "require": {
-                "default": "./dist/cjs/index.js"
-            }
+            "require": "./dist/cjs/index.js",
+            "default": "./dist/esm/index.js"
         },
         "./parser.component": {
             "types": "./dist/components/parser.component.d.ts",
-            "import": {
-                "default": "./dist/esm/parser.component.js"
-            },
-            "require": {
-                "default": "./dist/cjs/parser.component.js"
-            }
+            "require": "./dist/cjs/parser.component.js",
+            "default": "./dist/esm/parser.component.js"
         },
         "./formatter.component": {
             "types": "./dist/components/formatter.component.d.ts",
-            "import": {
-                "default": "./dist/esm/formatter.component.js"
-            },
-            "require": {
-                "default": "./dist/cjs/formatter.component.js"
-            }
+            "require": "./dist/cjs/formatter.component.js",
+            "default": "./dist/esm/formatter.component.js"
         },
         "./highlighter.component": {
             "types": "./dist/components/highlighter.component.d.ts",
-            "import": {
-                "default": "./dist/esm/highlighter.component.js"
-            },
-            "require": {
-                "default": "./dist/cjs/highlighter.component.js"
-            }
+            "require": "./dist/cjs/highlighter.component.js",
+            "default": "./dist/esm/highlighter.component.js"
         }
     },
     "files": [
