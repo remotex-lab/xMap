@@ -36,38 +36,42 @@
     },
     "typesVersions": {
         "*": {
+            "*": [
+                "./dist/*"
+            ],
             "parser.component": [
-                "./dist/components/parser.component.d.ts"
+                "./dist/parser.component.d.ts"
             ],
             "formatter.component": [
-                "./dist/components/formatter.component.d.ts"
+                "./dist/formatter.component.d.ts"
             ],
             "highlighter.component": [
-                "./dist/components/highlighter.component.d.ts"
+                "./dist/highlighter.component.d.ts"
             ]
         }
     },
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "require": "./dist/cjs/index.js",
-            "default": "./dist/esm/index.js"
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js"
         },
         "./parser.component": {
-            "types": "./dist/components/parser.component.d.ts",
-            "require": "./dist/cjs/parser.component.js",
-            "default": "./dist/esm/parser.component.js"
+            "types": "./dist/parser.component.d.ts",
+            "import": "./dist/esm/parser.component.js",
+            "require": "./dist/cjs/parser.component.js"
         },
         "./formatter.component": {
-            "types": "./dist/components/formatter.component.d.ts",
-            "require": "./dist/cjs/formatter.component.js",
-            "default": "./dist/esm/formatter.component.js"
+            "types": "./dist/formatter.component.d.ts",
+            "import": "./dist/esm/formatter.component.js",
+            "require": "./dist/cjs/formatter.component.js"
         },
         "./highlighter.component": {
-            "types": "./dist/components/highlighter.component.d.ts",
-            "require": "./dist/cjs/highlighter.component.js",
-            "default": "./dist/esm/highlighter.component.js"
-        }
+            "types": "./dist/highlighter.component.d.ts",
+            "import": "./dist/esm/highlighter.component.js",
+            "require": "./dist/cjs/highlighter.component.js"
+        },
+        "./package.json": "./package.json"
     },
     "files": [
         "dist",
@@ -86,13 +90,13 @@
     },
     "devDependencies": {
         "jest": "^29.7.0",
-        "eslint": "^9.22.0",
+        "eslint": "^9.23.0",
         "typescript-eslint": "^8.27.0",
         "eslint-plugin-tsdoc": "^0.4.0",
         "@swc/jest": "^0.2.37",
         "@types/jest": "^29.5.14",
         "@types/node": "^22.13.11",
-        "@remotex-labs/xbuild": "^1.5.3"
+        "@remotex-labs/xbuild": "^1.5.5"
     },
     "dependencies": {
         "typescript": "^5.8.2"
