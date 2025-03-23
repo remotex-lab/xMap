@@ -36,38 +36,42 @@
     },
     "typesVersions": {
         "*": {
+            "*": [
+                "./dist/*"
+            ],
             "parser.component": [
-                "./dist/components/parser.component.d.ts"
+                "./dist/parser.component.d.ts"
             ],
             "formatter.component": [
-                "./dist/components/formatter.component.d.ts"
+                "./dist/formatter.component.d.ts"
             ],
             "highlighter.component": [
-                "./dist/components/highlighter.component.d.ts"
+                "./dist/highlighter.component.d.ts"
             ]
         }
     },
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "require": "./dist/cjs/index.js",
-            "default": "./dist/esm/index.js"
+            "import": "./dist/esm/index.js",
+            "require": "./dist/cjs/index.js"
         },
         "./parser.component": {
-            "types": "./dist/components/parser.component.d.ts",
-            "require": "./dist/cjs/parser.component.js",
-            "default": "./dist/esm/parser.component.js"
+            "types": "./dist/parser.component.d.ts",
+            "import": "./dist/esm/parser.component.js",
+            "require": "./dist/cjs/parser.component.js"
         },
         "./formatter.component": {
-            "types": "./dist/components/formatter.component.d.ts",
-            "require": "./dist/cjs/formatter.component.js",
-            "default": "./dist/esm/formatter.component.js"
+            "types": "./dist/formatter.component.d.ts",
+            "import": "./dist/esm/formatter.component.js",
+            "require": "./dist/cjs/formatter.component.js"
         },
         "./highlighter.component": {
-            "types": "./dist/components/highlighter.component.d.ts",
-            "require": "./dist/cjs/highlighter.component.js",
-            "default": "./dist/esm/highlighter.component.js"
-        }
+            "types": "./dist/highlighter.component.d.ts",
+            "import": "./dist/esm/highlighter.component.js",
+            "require": "./dist/cjs/highlighter.component.js"
+        },
+        "./package.json": "./package.json"
     },
     "files": [
         "dist",
