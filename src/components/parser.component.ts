@@ -19,7 +19,8 @@ import type { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-
 const PATTERNS = {
     V8: {
         STANDARD: /at\s+(?:([^(]+?)\s+)?\(?(?:(.+?):(\d+):(\d+)|(native))\)?/,
-        EVAL: /^at\s(.+?)\s\(eval\sat\s(.+?)\s?\((.*):(\d+):(\d+)\),\s(.+?):(\d+):(\d+)\)$/
+        EVAL: /^at\s(.+?)\s\(eval\sat\s(.+?)\s?\((.*):(\d+):(\d+)\),\s(.+?):(\d+):(\d+)\)$/,
+        ALIAS: /^at\s(?:new\s)?(.+?)\s\[as\s(.+?)\]\s\(?(?:(.+?):(\d+):(\d+)|(native))\)?$/
     },
     SPIDERMONKEY: {
         EVAL: /^(.*)@(.+?):(\d+):(\d+),\s(.+?)@(.+?):(\d+):(\d+)$/,
@@ -187,11 +188,19 @@ export function safeParseInt(value: string | undefined | null): number | undefin
 export function parseV8StackLine(line: string): StackFrame {
     const frame = createDefaultFrame(line);
 
-    // Check for eval format first
+    // Common flags that apply to all formats
+    if (line.toLowerCase().includes('new')) frame.constructor = true;
+    if (line.toLowerCase().includes('async')) frame.async = true;
+
+    // Try to match against each pattern
     const evalMatch = line.match(PATTERNS.V8.EVAL);
+    const aliasMatch = !evalMatch && line.match(PATTERNS.V8.ALIAS);
+    const standardMatch = !evalMatch && !aliasMatch && line.match(PATTERNS.V8.STANDARD);
+
     if (evalMatch) {
+        // Handle eval format
         frame.eval = true;
-        frame.functionName = evalMatch[1] ? evalMatch[1] : undefined;
+        frame.functionName = evalMatch[1] || undefined;
 
         // Add eval origin information
         frame.evalOrigin = {
@@ -205,30 +214,30 @@ export function parseV8StackLine(line: string): StackFrame {
         frame.line = safeParseInt(evalMatch[7]) ?? undefined;
         frame.column = safeParseInt(evalMatch[8]) ?? undefined;
         frame.fileName = evalMatch[6] ? normalizePath(evalMatch[6]) : undefined;
-        frame.native = (frame.fileName ?? '').startsWith('node') ?? false;
+    } else if (aliasMatch) {
+        // Handle alias format
+        frame.functionName = aliasMatch[1] ? aliasMatch[1].trim() : undefined;
+        frame.functionName += aliasMatch[2] ? ` [as ${ aliasMatch[2].trim() }]` : '';
 
-        return frame;
-    }
-
-    // Standard V8 format
-    const match = line.match(PATTERNS.V8.STANDARD);
-    if (match) {
-        frame.functionName = match[1] ? match[1].trim() : undefined;
-
-        if(line.toLowerCase().includes('new'))
-            frame.constructor = true;
-
-        if(line.toLowerCase().includes('async'))
-            frame.async = true;
-
-        if (match[5] === 'native') {
+        if (aliasMatch[6] === 'native') {
             frame.native = true;
             frame.fileName = '[native code]';
         } else {
-            frame.line = safeParseInt(match[3]) ?? undefined;
-            frame.column = safeParseInt(match[4]) ?? undefined;
-            frame.fileName = match[2] ? normalizePath(match[2]) : undefined;
-            frame.native = (frame.fileName ?? '').startsWith('node') ?? false;
+            frame.line = safeParseInt(aliasMatch[4]) ?? undefined;
+            frame.column = safeParseInt(aliasMatch[5]) ?? undefined;
+            frame.fileName = aliasMatch[3] ? normalizePath(aliasMatch[3]) : undefined;
+        }
+    } else if (standardMatch) {
+        // Handle standard format
+        frame.functionName = standardMatch[1] ? standardMatch[1].trim() : undefined;
+
+        if (standardMatch[5] === 'native') {
+            frame.native = true;
+            frame.fileName = '[native code]';
+        } else {
+            frame.line = safeParseInt(standardMatch[3]) ?? undefined;
+            frame.column = safeParseInt(standardMatch[4]) ?? undefined;
+            frame.fileName = standardMatch[2] ? normalizePath(standardMatch[2]) : undefined;
         }
     }
 
@@ -269,10 +278,10 @@ export function parseSpiderMonkeyStackLine(line: string): StackFrame {
         frame.eval = true;
         frame.functionName = evalMatch[1] ? evalMatch[1] : undefined;
 
-        if(line.toLowerCase().includes('constructor'))
+        if (line.toLowerCase().includes('constructor'))
             frame.constructor = true;
 
-        if(line.toLowerCase().includes('async'))
+        if (line.toLowerCase().includes('async'))
             frame.async = true;
 
         // Add eval origin information
@@ -341,10 +350,10 @@ export function parseJavaScriptCoreStackLine(line: string): StackFrame {
         frame.functionName = match[2];
         frame.eval = (match[1] === 'eval' || match[3] === 'eval');
 
-        if(line.toLowerCase().includes('constructor'))
+        if (line.toLowerCase().includes('constructor'))
             frame.constructor = true;
 
-        if(line.toLowerCase().includes('async'))
+        if (line.toLowerCase().includes('async'))
             frame.async = true;
 
         if (match[3] === '[native code]') {
