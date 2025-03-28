@@ -410,6 +410,40 @@ describe('parseV8StackLine', () => {
             expect(result.eval).toBe(false);
         });
 
+        test('should parse anonymous evalmachine stack trace correctly', () => {
+            const line = 'at evalmachine.<anonymous>:1:7';
+            const result = parseV8StackLine(line);
+
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBe('evalmachine.<anonymous>');
+            expect(result.line).toBe(1);
+            expect(result.column).toBe(7);
+            expect(result.eval).toBe(false);
+        });
+
+        test('should parse file URL stack trace without function name correctly', () => {
+            const line = 'at file:///Projects/RemoteXLabs/xMap/dist/index.js:2:422';
+            const result = parseV8StackLine(line);
+
+            expect(result.functionName).toBeUndefined();
+            expect(result.fileName).toBe('/Projects/RemoteXLabs/xMap/dist/index.js');
+            expect(result.line).toBe(2);
+            expect(result.column).toBe(422);
+            expect(result.eval).toBe(false);
+        });
+
+        test('should parse async native module stack trace correctly', () => {
+            const line = 'at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:123:5)';
+            const result = parseV8StackLine(line);
+
+            expect(result.functionName).toBe('async asyncRunEntryPointWithESMLoader');
+            expect(result.fileName).toBe('node:internal/modules/run_main');
+            expect(result.line).toBe(123);
+            expect(result.column).toBe(5);
+            expect(result.eval).toBe(false);
+            expect(result.native).toBe(true);
+        });
+
         test('should handle stack lines with spaces in function names', () => {
             const line = 'at Object.<anonymous> (/path/to/file.js:20:30)';
             const result = parseV8StackLine(line);

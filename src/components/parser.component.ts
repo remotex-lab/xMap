@@ -18,9 +18,9 @@ import type { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-
 
 const PATTERNS = {
     V8: {
-        STANDARD: /at\s+(?:([^(]+?)\s+)?\(?(?:(.+?):(\d+):(\d+)|(native))\)?/,
-        EVAL: /^at\s(.+?)\s\(eval\sat\s(.+?)\s?\((.*):(\d+):(\d+)\),\s(.+?):(\d+):(\d+)\)$/,
-        ALIAS: /^at\s(?:new\s)?(.+?)\s\[as\s(.+?)\]\s\(?(?:(.+?):(\d+):(\d+)|(native))\)?$/
+        GLOBAL: /at\s(.*):(\d+):(\d+)/,
+        STANDARD: /at\s(.*?)\((?:(.+?):(\d+):(\d+)|(native))\)/,
+        EVAL: /^at\s(.+?)\s\(eval\sat\s(.+?)\s?\((.*):(\d+):(\d+)\),\s(.+?):(\d+):(\d+)\)$/
     },
     SPIDERMONKEY: {
         EVAL: /^(.*)@(.+?):(\d+):(\d+),\s(.+?)@(.+?):(\d+):(\d+)$/,
@@ -194,8 +194,8 @@ export function parseV8StackLine(line: string): StackFrame {
 
     // Try to match against each pattern
     const evalMatch = line.match(PATTERNS.V8.EVAL);
-    const aliasMatch = !evalMatch && line.match(PATTERNS.V8.ALIAS);
-    const standardMatch = !evalMatch && !aliasMatch && line.match(PATTERNS.V8.STANDARD);
+    const globalMatch = line.match(PATTERNS.V8.GLOBAL);
+    const standardMatch = !evalMatch && line.match(PATTERNS.V8.STANDARD);
 
     if (evalMatch) {
         // Handle eval format
@@ -214,19 +214,6 @@ export function parseV8StackLine(line: string): StackFrame {
         frame.line = safeParseInt(evalMatch[7]) ?? undefined;
         frame.column = safeParseInt(evalMatch[8]) ?? undefined;
         frame.fileName = evalMatch[6] ? normalizePath(evalMatch[6]) : undefined;
-    } else if (aliasMatch) {
-        // Handle alias format
-        frame.functionName = aliasMatch[1] ? aliasMatch[1].trim() : undefined;
-        frame.functionName += aliasMatch[2] ? ` [as ${ aliasMatch[2].trim() }]` : '';
-
-        if (aliasMatch[6] === 'native') {
-            frame.native = true;
-            frame.fileName = '[native code]';
-        } else {
-            frame.line = safeParseInt(aliasMatch[4]) ?? undefined;
-            frame.column = safeParseInt(aliasMatch[5]) ?? undefined;
-            frame.fileName = aliasMatch[3] ? normalizePath(aliasMatch[3]) : undefined;
-        }
     } else if (standardMatch) {
         // Handle standard format
         frame.functionName = standardMatch[1] ? standardMatch[1].trim() : undefined;
@@ -238,7 +225,12 @@ export function parseV8StackLine(line: string): StackFrame {
             frame.line = safeParseInt(standardMatch[3]) ?? undefined;
             frame.column = safeParseInt(standardMatch[4]) ?? undefined;
             frame.fileName = standardMatch[2] ? normalizePath(standardMatch[2]) : undefined;
+            if(frame.fileName?.includes('node:')) frame.native = true;
         }
+    } else if (globalMatch) {
+        frame.fileName = globalMatch[1] ? normalizePath(globalMatch[1]) : undefined;
+        frame.line = safeParseInt(globalMatch[2]) ?? undefined;
+        frame.column = safeParseInt(globalMatch[3]) ?? undefined;
     }
 
     return frame;
