@@ -18,7 +18,8 @@ import type { ParsedStackTrace, StackFrame } from '@components/interfaces/parse-
 
 const PATTERNS = {
     V8: {
-        STANDARD: /at\s([^\(]*)\(?(?:(.+?):(\d+):(\d+)|(native))\)?/,
+        GLOBAL: /at\s(.*):(\d+):(\d+)/,
+        STANDARD: /at\s(.*?)\((?:(.+?):(\d+):(\d+)|(native))\)/,
         EVAL: /^at\s(.+?)\s\(eval\sat\s(.+?)\s?\((.*):(\d+):(\d+)\),\s(.+?):(\d+):(\d+)\)$/
     },
     SPIDERMONKEY: {
@@ -193,6 +194,7 @@ export function parseV8StackLine(line: string): StackFrame {
 
     // Try to match against each pattern
     const evalMatch = line.match(PATTERNS.V8.EVAL);
+    const globalMatch = line.match(PATTERNS.V8.GLOBAL);
     const standardMatch = !evalMatch && line.match(PATTERNS.V8.STANDARD);
 
     if (evalMatch) {
@@ -223,7 +225,12 @@ export function parseV8StackLine(line: string): StackFrame {
             frame.line = safeParseInt(standardMatch[3]) ?? undefined;
             frame.column = safeParseInt(standardMatch[4]) ?? undefined;
             frame.fileName = standardMatch[2] ? normalizePath(standardMatch[2]) : undefined;
+            if(frame.fileName?.includes('node:')) frame.native = true;
         }
+    } else if (globalMatch) {
+        frame.fileName = globalMatch[1] ? normalizePath(globalMatch[1]) : undefined;
+        frame.line = safeParseInt(globalMatch[2]) ?? undefined;
+        frame.column = safeParseInt(globalMatch[3]) ?? undefined;
     }
 
     return frame;
