@@ -104,7 +104,7 @@ export class SourceService {
         this.names =  [ ...source.names ?? [] ];
         this.sources = [ ...source.sources ?? [] ];
         this.sourceRoot = source.sourceRoot ?? null;
-        this.sourcesContent = source.sourcesContent ? [ ...source.sourcesContent ] : [];;
+        this.sourcesContent = source.sourcesContent ? [ ...source.sourcesContent ] : [];
         this.mappings = new MappingProvider(source.mappings);
     }
 
