@@ -91,12 +91,12 @@
     "devDependencies": {
         "jest": "^29.7.0",
         "eslint": "^9.23.0",
-        "typescript-eslint": "^8.27.0",
+        "typescript-eslint": "^8.28.0",
         "eslint-plugin-tsdoc": "^0.4.0",
         "@swc/jest": "^0.2.37",
         "@types/jest": "^29.5.14",
-        "@types/node": "^22.13.11",
-        "@remotex-labs/xbuild": "^1.5.5"
+        "@types/node": "^22.13.14",
+        "@remotex-labs/xbuild": "^1.5.6"
     },
     "dependencies": {
         "typescript": "^5.8.2"
