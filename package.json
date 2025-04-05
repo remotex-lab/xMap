@@ -90,15 +90,15 @@
     },
     "devDependencies": {
         "jest": "^29.7.0",
-        "eslint": "^9.23.0",
-        "typescript-eslint": "^8.28.0",
+        "eslint": "^9.24.0",
+        "typescript-eslint": "^8.29.0",
         "eslint-plugin-tsdoc": "^0.4.0",
         "@swc/jest": "^0.2.37",
         "@types/jest": "^29.5.14",
-        "@types/node": "^22.13.14",
-        "@remotex-labs/xbuild": "^1.5.6"
+        "@types/node": "^22.14.0",
+        "@remotex-labs/xbuild": "^1.5.7"
     },
     "dependencies": {
-        "typescript": "^5.8.2"
+        "typescript": "^5.8.3"
     }
 }
